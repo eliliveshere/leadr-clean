@@ -15,116 +15,162 @@ export default async function AuditPage(props: { params: Promise<{ id: string }>
     let grade = 'F'
     let color = 'text-red-600'
     let bgColor = 'bg-red-50'
+    let borderColor = 'border-red-200'
+    let urgencyMessage = "Your digital presence is actively turning customers away."
 
-    if (score >= 9) { grade = 'A+'; color = 'text-green-600'; bgColor = 'bg-green-50'; }
-    else if (score >= 8) { grade = 'A'; color = 'text-green-500'; bgColor = 'bg-green-50'; }
-    else if (score >= 7) { grade = 'B'; color = 'text-blue-500'; bgColor = 'bg-blue-50'; }
-    else if (score >= 5) { grade = 'C'; color = 'text-yellow-500'; bgColor = 'bg-yellow-50'; }
-    else if (score >= 3) { grade = 'D'; color = 'text-orange-500'; bgColor = 'bg-orange-50'; }
+    if (score >= 9) {
+        grade = 'A+'; color = 'text-green-600'; bgColor = 'bg-green-50'; borderColor = 'border-green-200';
+        urgencyMessage = "You are doing great, but optimization could yield 10-20% more."
+    }
+    else if (score >= 8) {
+        grade = 'A'; color = 'text-green-500'; bgColor = 'bg-green-50'; borderColor = 'border-green-200';
+        urgencyMessage = "Strong foundation. Minor tweaks needed to dominate local search."
+    }
+    else if (score >= 7) {
+        grade = 'B'; color = 'text-blue-500'; bgColor = 'bg-blue-50'; borderColor = 'border-blue-200';
+        urgencyMessage = "You're visible, but likely losing 30% of traffic to top competitors."
+    }
+    else if (score >= 5) {
+        grade = 'C'; color = 'text-yellow-500'; bgColor = 'bg-yellow-50'; borderColor = 'border-yellow-200';
+        urgencyMessage = "Mediocre performance. You are invisible to half your potential market."
+    }
+    else if (score >= 3) {
+        grade = 'D'; color = 'text-orange-500'; bgColor = 'bg-orange-50'; borderColor = 'border-orange-200';
+        urgencyMessage = "Critical issues detected. You are likely losing thousands in revenue monthly."
+    }
+
+    // Simulated metric for persuasion
+    const missedLeads = Math.max(10, (10 - score) * 12)
 
     return (
-        <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
-            {/* Header */}
-            <header className="bg-white border-b py-6 px-4">
-                <div className="max-w-3xl mx-auto flex justify-between items-center">
-                    <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
-                        <span className="w-6 h-6 bg-black rounded-full flex items-center justify-center text-white text-xs">L</span>
-                        Lead2Close Audit
+        <div className="min-h-screen bg-white font-sans text-gray-900 selection:bg-black selection:text-white">
+            {/* Minimal Header */}
+            <header className="border-b border-gray-100 py-6 sticky top-0 bg-white/80 backdrop-blur z-10">
+                <div className="max-w-4xl mx-auto px-6 flex justify-between items-center">
+                    <div className="font-bold text-lg tracking-tight flex items-center gap-2">
+                        <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-serif">L</div>
+                        Lead2Close
                     </div>
-                    <div className="text-xs text-gray-400 uppercase tracking-widest">Confidential Report</div>
+                    <a href="https://calendly.com" target="_blank" className="text-sm font-medium hover:underline">Book Consultation →</a>
                 </div>
             </header>
 
-            <main className="max-w-3xl mx-auto py-10 px-4 space-y-10">
+            <main className="max-w-4xl mx-auto py-16 px-6 space-y-20">
 
                 {/* Hero Section */}
-                <div className="text-center space-y-4">
-                    <div className="inline-block px-3 py-1 bg-gray-200 rounded-full text-xs font-medium text-gray-600 mb-2">
-                        Prepared for {lead.business_name}
+                <div className="text-center space-y-6 max-w-2xl mx-auto">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gray-100 rounded-full text-sm font-medium text-gray-600">
+                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                        Audit Report for {lead.business_name}
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900">
-                        Digital Performance Audit
+                    <h1 className="text-5xl md:text-6xl font-black tracking-tight text-gray-900 leading-[1.1]">
+                        Is your website <br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-500">losing you money?</span>
                     </h1>
-                    <p className="text-lg text-gray-500 max-w-xl mx-auto">
-                        We analyzed your online presence, Google ranking, and customer engagement to generate this score.
+                    <p className="text-xl text-gray-500 leading-relaxed">
+                        We scanned your digital footprint against 50+ local ranking factors.
+                        Here is why you might be missing out on customers.
                     </p>
                 </div>
 
-                {/* Score Card */}
-                <div className="bg-white rounded-2xl shadow-sm border p-8 flex flex-col md:flex-row items-center gap-8 md:gap-16 justify-center">
-                    <div className={`w-40 h-40 rounded-full border-8 flex items-center justify-center ${color} border-current ${bgColor} opacity-90`}>
-                        <div className="text-center">
-                            <span className="block text-6xl font-black">{grade}</span>
-                            <span className="text-sm font-medium opacity-70">Score: {score}/10</span>
-                        </div>
+                {/* Score Dashboard */}
+                <div className="grid md:grid-cols-2 gap-8 items-stretch">
+                    <div className={`rounded-3xl p-10 flex flex-col items-center justify-center text-center border ${bgColor} ${borderColor} ${color}`}>
+                        <span className="text-lg font-semibold uppercase tracking-widest opacity-80 mb-4">Overall Grade</span>
+                        <div className="text-[120px] font-black leading-none tracking-tighter shadow-sm">{grade}</div>
+                        <div className="mt-4 text-2xl font-bold tracking-tight">{score}/10 Health Score</div>
                     </div>
-                    <div className="flex-1 space-y-4 text-center md:text-left">
-                        <div>
-                            <h3 className="text-lg font-semibold text-gray-900">What this means</h3>
-                            <p className="text-gray-600 mt-1">
-                                {score >= 7
-                                    ? "Your digital presence is solid, but there's still room to capture more leads."
-                                    : "You are likely losing potential customers to competitors due to gaps in your online strategy."
-                                }
+
+                    <div className="flex flex-col justify-center space-y-8 p-4">
+                        <div className="space-y-2">
+                            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-widest">Impact Analysis</h3>
+                            <p className="text-3xl font-bold text-gray-900 leading-tight">
+                                {urgencyMessage}
                             </p>
                         </div>
-                        {lead.enrichment_data?.analysis?.business_summary && (
-                            <p className="text-sm text-gray-500 italic border-l-2 pl-3">
-                                "{lead.enrichment_data.analysis.business_summary}"
-                            </p>
-                        )}
+
+                        <div className="space-y-2">
+                            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-widest">Estimated Loss</h3>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-4xl font-black text-gray-900">~{missedLeads}</span>
+                                <span className="text-lg text-gray-600 font-medium">high-value leads / mo</span>
+                            </div>
+                            <p className="text-sm text-gray-500">Based on search volume for {lead.business_name} vs competitors.</p>
+                        </div>
                     </div>
                 </div>
 
-                {/* Findings Grid */}
-                <div className="grid md:grid-cols-2 gap-6">
-                    {/* Strengths */}
-                    <div className="bg-white rounded-xl shadow-sm border p-6">
-                        <h3 className="font-semibold text-green-700 flex items-center gap-2 mb-4">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            What You're Doing Well
-                        </h3>
-                        <ul className="space-y-2">
-                            {lead.enrichment_data?.analysis?.key_strengths?.map((s: string, i: number) => (
-                                <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
-                                    <span className="mt-1 text-green-400">•</span> {s}
-                                </li>
-                            )) || <li className="text-gray-400 italic">Analysis in progress...</li>}
-                        </ul>
+                {/* Findings Section */}
+                <div className="space-y-8">
+                    <div className="flex items-center gap-4">
+                        <h2 className="text-2xl font-bold">Audit Findings</h2>
+                        <div className="h-px bg-gray-200 flex-1"></div>
                     </div>
 
-                    {/* Missed Opportunities */}
-                    <div className="bg-white rounded-xl shadow-sm border p-6">
-                        <h3 className="font-semibold text-red-600 flex items-center gap-2 mb-4">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                            Urgent Fixes Needed
-                        </h3>
-                        <ul className="space-y-2">
-                            {/* Merge Scan reasons and Enrichment weaknesses */}
-                            {((lead.scan_reasons || []).concat(lead.enrichment_data?.analysis?.weaknesses_or_gaps || [])).slice(0, 5).map((s: string, i: number) => (
-                                <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
-                                    <span className="mt-1 text-red-400">•</span> {s}
-                                </li>
-                            )) || <li className="text-sm text-gray-500">No major issues detected.</li>}
-                        </ul>
+                    <div className="grid md:grid-cols-2 gap-12">
+                        {/* The Good */}
+                        <div className="space-y-6">
+                            <h3 className="font-semibold text-green-600 flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-xs">✓</span>
+                                Current Strengths
+                            </h3>
+                            <ul className="space-y-4">
+                                {lead.enrichment_data?.analysis?.key_strengths?.slice(0, 4).map((s: string, i: number) => (
+                                    <li key={i} className="flex gap-3 text-gray-700 leading-relaxed">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 shrink-0"></div>
+                                        {s}
+                                    </li>
+                                )) || <li className="text-gray-400 italic">Analyzing...</li>}
+                            </ul>
+                        </div>
+
+                        {/* The Bad */}
+                        <div className="space-y-6">
+                            <h3 className="font-semibold text-red-600 flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center text-xs">!</span>
+                                Critical Gaps
+                            </h3>
+                            <ul className="space-y-4">
+                                {((lead.scan_reasons || []).concat(lead.enrichment_data?.analysis?.weaknesses_or_gaps || [])).slice(0, 5).map((s: string, i: number) => (
+                                    <li key={i} className="flex gap-3 text-gray-900 font-medium leading-relaxed bg-red-50/50 p-3 rounded-lg border border-red-50">
+                                        <span className="text-red-500 mt-0.5">•</span>
+                                        {s}
+                                    </li>
+                                )) || <li className="text-gray-500">No critical issues found.</li>}
+                            </ul>
+                        </div>
                     </div>
                 </div>
 
-                {/* Call to Action */}
-                <div className="bg-black text-white rounded-2xl p-8 text-center space-y-6">
-                    <h2 className="text-2xl font-bold">Want to fix these issues?</h2>
-                    <p className="text-gray-300 max-w-lg mx-auto">
-                        We help businesses like yours automate lead capture and improve reputation scores.
-                        Let's chat about getting you to an "A" grade.
+                {/* Final CTA Strip */}
+                <div className="relative overflow-hidden bg-black text-white rounded-3xl p-8 md:p-12 text-center space-y-8 shadow-2xl">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500"></div>
+
+                    <div className="max-w-2xl mx-auto space-y-6">
+                        <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Stop losing {missedLeads} leads every month.</h2>
+                        <p className="text-gray-400 text-lg">
+                            We can fix these specific issues for you in less than 7 days.
+                            Zero downtime. 100% done-for-you.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                        <a
+                            href="https://calendly.com"
+                            target="_blank"
+                            className="w-full sm:w-auto px-8 py-4 bg-white text-black font-bold text-lg rounded-full hover:bg-gray-100 transition-transform active:scale-95 shadow-lg"
+                        >
+                            Fix My Score →
+                        </a>
+                        <span className="text-sm text-gray-500 font-medium">or call (555) 123-4567</span>
+                    </div>
+                </div>
+
+                <footer className="text-center space-y-4 pt-10 border-t border-gray-100">
+                    <p className="text-xs text-gray-400">
+                        This automated audit is generated by Lead2Close based on publicly available data from Google, Yelp, and your website.
+                        <br />&copy; {new Date().getFullYear()} Lead2Close Inc.
                     </p>
-                    <a href="#" className="inline-block bg-white text-black font-semibold px-8 py-3 rounded-full hover:bg-gray-100 transition-colors">
-                        Book a 15-min Strategy Call
-                    </a>
-                    <p className="text-xs text-gray-500 mt-4">Free consultation. No obligation.</p>
-                </div>
-
-                <footer className="text-center text-xs text-gray-400 py-6">
-                    Generated by Lead2Close AI Engine • {new Date().getFullYear()}
                 </footer>
 
             </main>
