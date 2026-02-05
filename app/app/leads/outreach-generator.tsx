@@ -26,11 +26,22 @@ export default function OutreachGenerator({ lead }: OutreachGeneratorProps) {
                 })
             })
 
-            if (!res.ok) throw new Error('Generation failed')
+            if (!res.ok) {
+                const err = await res.text()
+                console.error("Generator Fetch Error:", err)
+                throw new Error('Generation failed: ' + err)
+            }
             const data = await res.json()
+            console.log("Generator Output:", data) // Debug log
+
+            if (!data || (!data.sms?.length && !data.email?.length)) {
+                toast.error('AI returned no messages. Check console.')
+            }
+
             setResult(data)
-        } catch (e) {
-            toast.error('Failed to generate messages')
+        } catch (e: any) {
+            console.error(e)
+            toast.error(e.message || 'Failed to generate messages')
         } finally {
             setGenerating(false)
         }
