@@ -7,14 +7,14 @@ import { createClient } from '@/lib/supabase/server'
 const GenerateRequestSchema = z.object({
     lead: z.object({
         business_name: z.string(),
-        category: z.string().optional(),
-        city: z.string().optional(),
-        phone: z.string().optional(),
-        email: z.string().optional(),
-        website: z.string().optional(),
-        rating: z.number().optional(),
-        review_count: z.number().optional(),
-        has_opt_in: z.boolean().optional(),
+        category: z.string().optional().nullable(),
+        city: z.string().optional().nullable(),
+        phone: z.string().optional().nullable(),
+        email: z.string().optional().nullable(),
+        website: z.string().optional().nullable(),
+        rating: z.number().optional().nullable(),
+        review_count: z.number().optional().nullable(),
+        has_opt_in: z.boolean().optional().nullable(),
         status: z.string(),
         // Scan fields
         scan_score: z.number().optional().nullable(),
