@@ -114,6 +114,43 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
         toast.success(`Enriched ${selected.length} leads`)
     }
 
+    // Add to Queue Logic
+    const addToQueue = async () => {
+        if (selected.length === 0) return
+
+        // 1. Mark as queued
+        const { error } = await createClient()
+            .from('leads')
+            .update({ outreach_status: 'queued', outreach_scheduled_at: new Date().toISOString() })
+            .in('id', selected)
+
+        if (error) {
+            toast.error("Failed to queue")
+            return
+        }
+
+        toast.success(`Queued ${selected.length} leads`)
+        setEnriching(true) // Reuse loader state for visual feedback
+
+        // 2. Trigger processor loop
+        let completed = 0
+        const processOne = async () => {
+            await fetch('/api/outreach/process-queue', { method: 'POST' })
+            completed++
+            setProgress({ completed, total: selected.length })
+        }
+
+        // Run sequentially to be safe with rate limits
+        for (let i = 0; i < selected.length; i++) {
+            await processOne() // Intentionally serial to avoid rate limits
+        }
+
+        setEnriching(false)
+        setProgress(null)
+        router.refresh()
+        toast.success("Outreach batch complete")
+    }
+
     return (
         <div className="space-y-4 font-sans">
             <div className="flex gap-2 mb-4 items-center bg-gray-50 p-3 rounded-lg border">
@@ -122,7 +159,7 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
                 {scanning || enriching ? (
                     <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded text-sm flex items-center gap-2 animate-pulse">
                         <Loader2 className="animate-spin h-4 w-4" />
-                        {scanning ? 'Scanning...' : 'Enriching...'}
+                        {scanning ? 'Scanning...' : 'Processing...'}
                         {progress ? `${progress.completed}/${progress.total}` : ''}
                     </div>
                 ) : (
@@ -138,10 +175,18 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
                         <button
                             onClick={runEnrich}
                             disabled={selected.length === 0}
+                            className="bg-white border text-black hover:bg-gray-100 px-3 py-1.5 rounded text-sm flex items-center gap-2 disabled:opacity-50 transition-colors"
+                        >
+                            <Sparkles className="w-3 h-3 text-purple-600" />
+                            Enrich
+                        </button>
+                        <button
+                            onClick={addToQueue}
+                            disabled={selected.length === 0}
                             className="bg-black text-white hover:bg-gray-800 px-3 py-1.5 rounded text-sm flex items-center gap-2 disabled:opacity-50 transition-colors"
                         >
-                            <Sparkles className="w-3 h-3 text-yellow-300" />
-                            Enrich Leads
+                            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                            Start Outreach Queue
                         </button>
                     </>
                 )}
