@@ -53,7 +53,8 @@ export async function POST(request: Request) {
     const result = GenerateRequestSchema.safeParse(json)
 
     if (!result.success) {
-        return new NextResponse('Invalid request', { status: 400 })
+        console.error("Schema Validation Error:", JSON.stringify(result.error.format(), null, 2))
+        return new NextResponse('Invalid request: ' + JSON.stringify(result.error.format()), { status: 400 })
     }
 
     const { lead, style, sequence } = result.data
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
   `
 
     const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-2024-08-06',
+        model: 'gpt-4o-mini',
         messages: [
             { role: 'system', content: 'You are a helpful sales assistant generating outreach. Output valid JSON.' },
             { role: 'user', content: prompt }
