@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import OutreachGenerator from '../outreach-generator'
+import CopyAuditLink from '../copy-audit-link'
 
 export default async function LeadDetailPage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params
@@ -15,7 +16,10 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold">{lead.business_name}</h1>
-                <span className="bg-gray-100 px-3 py-1 rounded text-sm capitalize">{lead.status}</span>
+                <div className="flex items-center gap-2">
+                    <CopyAuditLink id={lead.id} />
+                    <span className="bg-gray-100 px-3 py-1 rounded text-sm capitalize">{lead.status}</span>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
