@@ -4,12 +4,15 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { Link2, Sparkles, Zap, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
     const [leads, setLeads] = useState(initialLeads)
     const [selected, setSelected] = useState<string[]>([])
     const [scanning, setScanning] = useState(false)
-    const [scanProgress, setScanProgress] = useState<{ completed: number, total: number } | null>(null)
+    const [enriching, setEnriching] = useState(false)
+    const [progress, setProgress] = useState<{ completed: number, total: number } | null>(null)
 
     const router = useRouter()
 
@@ -27,10 +30,17 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
         )
     }
 
+    const copyAuditLink = (id: string) => {
+        const url = `${window.location.origin}/audit/${id}`
+        navigator.clipboard.writeText(url)
+        toast.success("Audit link copied!")
+    }
+
+    // Reuse existing scan logic
     const runScan = async () => {
         if (selected.length === 0) return
         setScanning(true)
-        setScanProgress({ completed: 0, total: selected.length })
+        setProgress({ completed: 0, total: selected.length })
 
         try {
             const res = await fetch('/api/qualification/start', {
@@ -41,33 +51,29 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
 
             const { job_id } = await res.json()
 
-            // Poll/Run loop
             const processBatch = async () => {
                 const runRes = await fetch('/api/qualification/run', {
                     method: 'POST',
                     body: JSON.stringify({ job_id })
                 })
                 const runData = await runRes.json()
-
                 const statusRes = await fetch(`/api/qualification/status?job_id=${job_id}`)
                 const statusData = await statusRes.json()
 
-                setScanProgress({ completed: statusData.completed, total: statusData.total })
+                setProgress({ completed: statusData.completed, total: statusData.total })
 
                 if (statusData.status === 'running' || statusData.status === 'queued') {
-                    // If batch did nothing, wait a bit?
                     if (runData.processed === 0 && runData.status !== 'done') {
                         setTimeout(processBatch, 2000)
                     } else {
-                        setTimeout(processBatch, 500) // fast loop
+                        setTimeout(processBatch, 500)
                     }
                 } else {
                     setScanning(false)
-                    setScanProgress(null)
+                    setProgress(null)
                     router.refresh()
                 }
             }
-
             processBatch()
 
         } catch (e) {
@@ -76,83 +82,168 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
         }
     }
 
+    // New Bulk Enrichment Logic (Client-side Loop mostly)
+    const runEnrich = async () => {
+        if (selected.length === 0) return
+        setEnriching(true)
+        setProgress({ completed: 0, total: selected.length })
+
+        // We'll process them 1 by 1 to not timeout Vercel limit on a single bulk request if we made one.
+        // Actually, individual POSTs is the safest "poor man's queue".
+        let completed = 0;
+
+        // Helper to enrich one
+        const enrichOne = async (id: string) => {
+            const formData = new FormData()
+            formData.append('lead_id', id)
+            await fetch('/api/enrich', { method: 'POST', body: formData })
+            completed++
+            setProgress({ completed, total: selected.length })
+        }
+
+        // Run with concurrency of 3
+        const batchSize = 3;
+        for (let i = 0; i < selected.length; i += batchSize) {
+            const batch = selected.slice(i, i + batchSize);
+            await Promise.all(batch.map(id => enrichOne(id)));
+        }
+
+        setEnriching(false)
+        setProgress(null)
+        router.refresh()
+        toast.success(`Enriched ${selected.length} leads`)
+    }
+
     return (
-        <div className="space-y-4">
-            <div className="flex gap-2 mb-4">
-                {scanning ? (
-                    <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded text-sm flex items-center gap-2">
-                        <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                        Scanning... {scanProgress ? `${scanProgress.completed}/${scanProgress.total}` : ''}
+        <div className="space-y-4 font-sans">
+            <div className="flex gap-2 mb-4 items-center bg-gray-50 p-3 rounded-lg border">
+                <span className="text-sm font-medium text-gray-500 mr-2">Bulk Actions ({selected.length}):</span>
+
+                {scanning || enriching ? (
+                    <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded text-sm flex items-center gap-2 animate-pulse">
+                        <Loader2 className="animate-spin h-4 w-4" />
+                        {scanning ? 'Scanning...' : 'Enriching...'}
+                        {progress ? `${progress.completed}/${progress.total}` : ''}
                     </div>
                 ) : (
-                    <button
-                        onClick={runScan}
-                        disabled={selected.length === 0}
-                        className="bg-black text-white px-4 py-2 rounded text-sm disabled:opacity-50"
-                    >
-                        Run Qualification Scan ({selected.length})
-                    </button>
+                    <>
+                        <button
+                            onClick={runScan}
+                            disabled={selected.length === 0}
+                            className="bg-white border text-black hover:bg-gray-100 px-3 py-1.5 rounded text-sm flex items-center gap-2 disabled:opacity-50 transition-colors"
+                        >
+                            <Zap className="w-3 h-3" />
+                            Qualify
+                        </button>
+                        <button
+                            onClick={runEnrich}
+                            disabled={selected.length === 0}
+                            className="bg-black text-white hover:bg-gray-800 px-3 py-1.5 rounded text-sm flex items-center gap-2 disabled:opacity-50 transition-colors"
+                        >
+                            <Sparkles className="w-3 h-3 text-yellow-300" />
+                            Enrich Leads
+                        </button>
+                    </>
                 )}
             </div>
 
-            <div className="border rounded-md overflow-hidden">
+            <div className="border rounded-lg overflow-hidden shadow-sm bg-white">
                 <table className="w-full text-sm text-left">
-                    <thead className="bg-muted text-muted-foreground bg-gray-100">
+                    <thead className="bg-gray-50 text-gray-500 font-medium">
                         <tr className="border-b">
                             <th className="p-3 w-[40px]">
-                                <input type="checkbox" onChange={handleSelectAll} checked={selected.length === leads.length && leads.length > 0} />
+                                <input type="checkbox" onChange={handleSelectAll} checked={selected.length === leads.length && leads.length > 0} className="rounded border-gray-300" />
                             </th>
-                            <th className="p-3 font-medium">Business</th>
-                            <th className="p-3 font-medium">Status</th>
-                            <th className="p-3 font-medium">Score</th>
-                            <th className="p-3 font-medium">Angle</th>
-                            <th className="p-3 font-medium text-right">Actions</th>
+                            <th className="p-3">Business</th>
+                            <th className="p-3">Enrichment</th>
+                            <th className="p-3">Audit</th>
+                            <th className="p-3">Score</th>
+                            <th className="p-3 text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y">
                         {leads.map((lead: any) => (
-                            <tr key={lead.id} className="border-b last:border-0 hover:bg-muted/50">
-                                <td className="p-3">
-                                    <input type="checkbox" checked={selected.includes(lead.id)} onChange={() => handleSelect(lead.id)} />
+                            <tr key={lead.id} className="hover:bg-gray-50/50 transition-colors">
+                                <td className="p-3 align-top pt-4">
+                                    <input type="checkbox" checked={selected.includes(lead.id)} onChange={() => handleSelect(lead.id)} className="rounded border-gray-300" />
                                 </td>
                                 <td className="p-3">
-                                    <div className="font-medium flex items-center gap-2">
-                                        {lead.business_name}
+                                    <div className="font-semibold text-gray-900 flex items-center gap-2">
+                                        <Link href={`/app/leads/${lead.id}`} className="hover:text-blue-600">
+                                            {lead.business_name}
+                                        </Link>
                                         {lead.google_verified && (
-                                            <span title="Google Verified" className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full border border-blue-200">✓ Verified</span>
-                                        )}
-                                        {lead.google_is_permanently_closed && (
-                                            <span className="text-[10px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded-full">CLOSED</span>
+                                            <span title="Google Verified" className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded-full border border-blue-100">Verified</span>
                                         )}
                                     </div>
-                                    <div className="text-xs text-gray-500 flex items-center gap-2">
-                                        {lead.city}
-                                        {lead.source === 'google_csv' && <span className="text-[10px] text-gray-400 bg-gray-50 px-1 rounded border">G-Maps</span>}
+                                    <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-2">
+                                        <span>{lead.city}</span>
+                                        {lead.category && <span className="bg-gray-100 px-1 rounded">{lead.category}</span>}
+                                        <span className={`px-1.5 rounded-full text-[10px] border capitalize ${lead.status === 'new' ? 'bg-gray-50 border-gray-200' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                                            {lead.status}
+                                        </span>
                                     </div>
                                 </td>
-                                <td className="p-3">
-                                    <span className="capitalize">{lead.status}</span>
-                                    {lead.scan_status === 'done' && <span className="ml-2 text-xs bg-green-100 text-green-800 px-1 rounded">Scanned</span>}
-                                    {lead.scan_status === 'failed' && <span className="ml-2 text-xs bg-red-100 text-red-800 px-1 rounded">Error</span>}
+                                <td className="p-3 align-middle">
+                                    {lead.enrichment_status === 'enriched' ? (
+                                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-100">
+                                            <Sparkles className="w-3 h-3" /> Enriched
+                                        </span>
+                                    ) : lead.enrichment_status === 'enriching' ? (
+                                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-100">
+                                            <Loader2 className="w-3 h-3 animate-spin" /> Working
+                                        </span>
+                                    ) : lead.enrichment_status === 'failed' ? (
+                                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-100">
+                                            <AlertCircle className="w-3 h-3" /> Failed
+                                        </span>
+                                    ) : (
+                                        <span className="text-xs text-gray-400">Pending</span>
+                                    )}
                                 </td>
-                                <td className="p-3">
+                                <td className="p-3 align-middle">
+                                    {/* Show audit link only if we have a score or enrichment data */}
+                                    {(lead.scan_score || lead.enrichment_status === 'enriched') ? (
+                                        <button
+                                            onClick={() => copyAuditLink(lead.id)}
+                                            className="inline-flex items-center gap-1 text-xs bg-white hover:bg-gray-100 border px-2 py-1 rounded text-gray-600 transition-colors shadow-sm"
+                                        >
+                                            <Link2 className="w-3 h-3" /> Audit Link
+                                        </button>
+                                    ) : (
+                                        <span className="text-xs text-gray-300 italic">No data</span>
+                                    )}
+                                </td>
+                                <td className="p-3 align-middle">
                                     {lead.scan_score !== null ? (
-                                        <div className={`font-bold ${lead.scan_score > 7 ? 'text-green-600' : lead.scan_score < 4 ? 'text-red-500' : 'text-yellow-600'}`}>
-                                            {lead.scan_score}/10
+                                        <div className={`font-bold text-base ${lead.scan_score > 7 ? 'text-green-600' : lead.scan_score < 4 ? 'text-red-500' : 'text-yellow-600'}`}>
+                                            {lead.scan_score}
                                         </div>
-                                    ) : '-'}
+                                    ) : (
+                                        <span className="text-gray-300">-</span>
+                                    )}
                                 </td>
-                                <td className="p-3 max-w-xs truncate text-xs text-gray-600">
-                                    {lead.scan_recommended_angle || '-'}
-                                </td>
-                                <td className="p-3 text-right">
-                                    <Link href={`/app/leads/${lead.id}`} className="text-blue-600 hover:underline">View</Link>
+                                <td className="p-3 text-right align-middle">
+                                    <Link
+                                        href={`/app/leads/${lead.id}`}
+                                        className="inline-block text-sm font-medium text-gray-900 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded transition-colors"
+                                    >
+                                        Open
+                                    </Link>
                                 </td>
                             </tr>
                         ))}
+                        {leads.length === 0 && (
+                            <tr>
+                                <td colSpan={6} className="p-8 text-center text-gray-500">
+                                    No leads found. Import some to get started.
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>
         </div>
     )
 }
+
