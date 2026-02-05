@@ -11,8 +11,6 @@ export async function middleware(request: NextRequest) {
         const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
         if (!url || !key || url.includes('placeholder')) {
-            // If env vars are missing or placeholders, skip auth logic to prevent crash
-            // The app will likely fail later on specific data fetches, but at least it loads.
             return supabaseResponse
         }
 
@@ -25,7 +23,7 @@ export async function middleware(request: NextRequest) {
                         return request.cookies.getAll()
                     },
                     setAll(cookiesToSet) {
-                        cookiesToSet.forEach(({ name, value, options }) =>
+                        cookiesToSet.forEach(({ name, value }) =>
                             request.cookies.set(name, value)
                         )
                         supabaseResponse = NextResponse.next({
@@ -39,9 +37,9 @@ export async function middleware(request: NextRequest) {
             }
         )
 
-        const {
-            data: { user },
-        } = await supabase.auth.getUser()
+        // IMPORTANT: Avoid await if possible or ensure it doesn't timeout.
+        // getUser is fast.
+        const { data: { user } } = await supabase.auth.getUser()
 
         if (
             !user &&
@@ -55,8 +53,8 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(redirectUrl)
         }
     } catch (e) {
-        console.error("Middleware Auth Error:", e)
-        // Allow request to proceed on error, sticking to "fail open" to avoid 500 blocking site
+        // fail open
+        console.error("Middleware error", e)
     }
 
     return supabaseResponse
