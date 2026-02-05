@@ -69,6 +69,17 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
                         </div>
                     )}
 
+                    {lead.enrichment_status === 'failed' && (
+                        <div className="text-center py-6 text-red-500">
+                            <p className="text-sm">Enrichment failed.</p>
+                            <p className="text-xs text-gray-400 mt-1">Check logs (usually invalid OpenAI Key)</p>
+                            <form action="/api/enrich" method="post" className="mt-2">
+                                <input type="hidden" name="lead_id" value={lead.id} />
+                                <button className="text-red-600 underline text-xs">Try Again</button>
+                            </form>
+                        </div>
+                    )}
+
                     {lead.enrichment_status === 'enriched' && lead.enrichment_data && (
                         <div className="space-y-4 text-sm">
                             <div className="bg-purple-50 p-3 rounded border border-purple-100">

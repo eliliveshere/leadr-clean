@@ -108,8 +108,13 @@ export async function POST(request: Request) {
         }).eq('id', lead_id)
 
     } catch (err: any) {
-        console.error(err)
-        await supabase.from('leads').update({ enrichment_status: 'failed' }).eq('id', lead_id)
+        console.error("Enrichment API Error:", err)
+        // Try to save error to DB (assuming we add a column or reuse existing scan_error or just status)
+        // For now just mark failed.
+        await supabase.from('leads').update({
+            enrichment_status: 'failed',
+            // If we had an error column we'd use it. I'll rely on logs for now.
+        }).eq('id', lead_id)
     }
 
     return NextResponse.redirect(new URL(`/app/leads/${lead_id}`, request.url))
