@@ -1,42 +1,12 @@
 import { OpenAI } from 'openai'
-import { z } from 'zod'
-import { zodResponseFormat } from 'openai/helpers/zod'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import * as cheerio from 'cheerio'
 
-// Enrichment Output Schema
-const EnrichmentSchema = z.object({
-    analysis: z.object({
-        business_summary: z.string(),
-        target_audience: z.string(),
-        key_strengths: z.array(z.string()),
-        weaknesses_or_gaps: z.array(z.string()),
-        improvement_opportunities: z.array(z.string()),
-        estimated_tech_savviness: z.enum(['low', 'medium', 'high']),
-    }),
-    contact_info: z.object({
-        emails_found: z.array(z.string()),
-        social_platforms: z.object({
-            facebook: z.string().optional(),
-            instagram: z.string().optional(),
-            linkedin: z.string().optional(),
-            twitter: z.string().optional(),
-            youtube: z.string().optional(),
-        }),
-    }),
-    monitoring_signals: z.object({
-        social_activity_level: z.string().describe("Estimate: High, Medium, Low, or Dormant based on clues"),
-        website_update_frequency: z.string().describe("Estimate: dynamic/modern or static/outdated"),
-        review_freshness: z.string().describe("Comment on review recency"),
-        missing_channels: z.array(z.string()).describe("List major channels they are missing"),
-    }),
-    outreach_hook: z.string().describe("A personalized single sentence hook for a cold email based on findings."),
-})
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || 'placeholder' })
 
 export async function POST(request: Request) {
+    console.log("--> ENRICH API CALLED (JSON MODE)")
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return new NextResponse('Unauthorized', { status: 401 })
@@ -46,7 +16,7 @@ export async function POST(request: Request) {
 
     if (!lead_id) return new NextResponse('Missing lead_id', { status: 400 })
 
-    // 1. Mark as enriching
+    // 1. Mark as enrichment in progress
     await supabase.from('leads').update({ enrichment_status: 'enriching' }).eq('id', lead_id)
 
     try {
@@ -54,7 +24,7 @@ export async function POST(request: Request) {
         const { data: lead } = await supabase.from('leads').select('*').eq('id', lead_id).single()
         if (!lead) throw new Error("Lead not found")
 
-        // 3. Scrape Website Content (Smart)
+        // 3. Scrape Website Content
         let websiteText = ""
         let socialLinksFound: string[] = []
 
@@ -74,7 +44,7 @@ export async function POST(request: Request) {
                     $('script, style').remove()
                     websiteText = $('body').text().slice(0, 8000) // Limit tokens
 
-                    // Extract Social Links explicitly for AI
+                    // Extract Social Links
                     $('a').each((_, el) => {
                         const href = $(el).attr('href')
                         if (href && (href.includes('facebook.com') || href.includes('instagram.com') || href.includes('linkedin.com') || href.includes('twitter.com') || href.includes('youtube.com'))) {
@@ -105,25 +75,53 @@ export async function POST(request: Request) {
        
        Task:
        1. Identify strengths and weaknesses.
-       2. Confirm social media links and put them in the correct fields.
-       3. "Monitoring Signals": Estimate their digital heartbeat. 
-          - Are they active on social? (If we found links, assume 'Visible', if links are broken or missing, 'Dormant').
-          - Does the site look updated?
+       2. Confirm social media links.
+       3. Estimate "Monitoring Signals" (Are they active? Review freshness?).
        4. Suggest a specific outreach hook.
+
+       RETURN JSON ONLY (No markdown formatting). Structure:
+       {
+         "analysis": {
+             "business_summary": "...",
+             "key_strengths": ["..."],
+             "weaknesses_or_gaps": ["..."],
+             "improvement_opportunities": ["..."],
+             "estimated_tech_savviness": "low|medium|high"
+         },
+         "contact_info": {
+             "emails_found": ["..."],
+             "social_platforms": {
+                 "facebook": "url or null",
+                 "instagram": "url or null",
+                 "linkedin": "url or null",
+                 "twitter": "url or null",
+                 "youtube": "url or null"
+             }
+         },
+         "monitoring_signals": {
+             "social_activity_level": "High|Medium|Low|Dormant",
+             "website_update_frequency": "dynamic|static",
+             "review_freshness": "...",
+             "missing_channels": ["..."]
+         },
+         "outreach_hook": "..."
+       }
      `
 
-        // 5. Call OpenAI
+        // 5. Call OpenAI (JSON Mode)
         const completion = await openai.chat.completions.create({
             model: 'gpt-4o-2024-08-06',
             messages: [
-                { role: 'system', content: 'You are an expert business analyst.' },
+                { role: 'system', content: 'You are an expert business analyst. Return valid JSON only.' },
                 { role: 'user', content: prompt }
             ],
-            response_format: zodResponseFormat(EnrichmentSchema, "enrichment_result"),
+            response_format: { type: "json_object" },
         })
 
         const content = completion.choices[0].message.content
         const enrichmentData = content ? JSON.parse(content) : null
+
+        console.log("Enrichment Success:", JSON.stringify(enrichmentData, null, 2))
 
         // 6. Save Result
         await supabase.from('leads').update({
@@ -134,11 +132,8 @@ export async function POST(request: Request) {
 
     } catch (err: any) {
         console.error("Enrichment API Error:", err)
-        // Try to save error to DB (assuming we add a column or reuse existing scan_error or just status)
-        // For now just mark failed.
         await supabase.from('leads').update({
             enrichment_status: 'failed',
-            // If we had an error column we'd use it. I'll rely on logs for now.
         }).eq('id', lead_id)
     }
 
