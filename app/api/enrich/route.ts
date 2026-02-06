@@ -60,7 +60,8 @@ export async function POST(request: Request) {
 
         // 4. Construct Prompt
         const prompt = `
-       Analyze this business for a B2B service agency (Lead2Close).
+       You are Anti-Gravity. Your job is to generate a concise, owner-friendly Digital Performance Audit for the Lead2Close app.
+       Do NOT use technical jargon or buzzwords. The audience is a local business owner — keep it simple, clear, and credible.
        
        Business: ${lead.business_name}
        City: ${lead.city}
@@ -74,19 +75,21 @@ export async function POST(request: Request) {
        ${websiteText.replace(/\s+/g, ' ').trim()}
        
        Task:
-       1. Identify strengths and weaknesses.
-       2. Confirm social media links.
-       3. Estimate "Monitoring Signals" (Are they active? Review freshness?).
-       4. Suggest a specific outreach hook.
+       1. Identify 3-5 "Current Strengths" (High Google rating, 24/7 services, etc).
+       2. Identify 3-5 "Critical Gaps" (Contact form hard to find, missing hours, no social visibility, etc).
+       3. Extract contact info & social links.
+       4. Determine "Monitoring Signals" status.
+       5. Write a simple "Impact Analysis" sentence summarizing their score impact.
 
-       RETURN JSON ONLY (No markdown formatting). Structure:
+       RETURN JSON ONLY. Structure:
        {
          "analysis": {
-             "business_summary": "...",
-             "key_strengths": ["..."],
-             "weaknesses_or_gaps": ["..."],
-             "improvement_opportunities": ["..."],
-             "estimated_tech_savviness": "low|medium|high"
+             "business_summary": "Short 1-sentence summary of what they do.",
+             "key_strengths": ["Strength 1", "Strength 2", "..."], 
+             "weaknesses_or_gaps": ["Gap 1", "Gap 2", "..."],
+             "improvement_opportunities": ["Opp 1", "Opp 2"],
+             "estimated_tech_savviness": "low|medium|high",
+             "impact_analysis": "One sentence summarizing how their score translates to visibility or missed opportunities."
          },
          "contact_info": {
              "emails_found": ["..."],
@@ -104,7 +107,7 @@ export async function POST(request: Request) {
              "review_freshness": "...",
              "missing_channels": ["..."]
          },
-         "outreach_hook": "..."
+         "outreach_hook": "A personalized single sentence hook for a cold email based on findings."
        }
      `
 

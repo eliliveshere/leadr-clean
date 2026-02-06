@@ -39,6 +39,11 @@ export default async function AuditPage(props: { params: Promise<{ id: string }>
         urgencyMessage = "Critical issues detected. You are likely losing thousands in revenue monthly."
     }
 
+    // Override with AI analysis if available
+    if (lead.enrichment_data?.analysis?.impact_analysis) {
+        urgencyMessage = lead.enrichment_data.analysis.impact_analysis
+    }
+
     // Simulated metric for persuasion
     const missedLeads = Math.max(10, (10 - score) * 12)
 
