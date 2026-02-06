@@ -66,7 +66,7 @@ export default async function AuditPage(props: { params: Promise<{ id: string }>
                 <div className="text-center space-y-6 max-w-2xl mx-auto">
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gray-100 rounded-full text-sm font-medium text-gray-600">
                         <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                        Audit Report for {lead.business_name}
+                        Online Health Monitor for {lead.business_name}
                     </div>
                     <h1 className="text-5xl md:text-6xl font-black tracking-tight text-gray-900 leading-[1.1]">
                         Is your website <br />
@@ -148,52 +148,135 @@ export default async function AuditPage(props: { params: Promise<{ id: string }>
                 </div>
 
                 {/* Monthly Monitoring Upsell - New Product */}
-                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8 md:p-10 space-y-8">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8 md:p-12 space-y-10">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-gray-200 pb-8">
                         <div>
-                            <div className="text-sm font-bold text-purple-600 uppercase tracking-widest mb-1">Recommended Solution</div>
-                            <h2 className="text-2xl font-bold text-gray-900">24/7 Digital Performance Monitoring</h2>
-                            <p className="text-gray-500 mt-2 max-w-md">Don't let your score drop again. We track your reputation, uptime, and rankings automatically.</p>
+                            <div className="text-sm font-bold text-purple-600 uppercase tracking-widest mb-2">Recommended Solution</div>
+                            <h2 className="text-3xl font-bold text-gray-900">Your Monthly Online Health Monitor</h2>
+                            <p className="text-gray-500 mt-3 max-w-xl text-lg">
+                                Don't let your score drop again. We track your reputation, uptime, and rankings automatically.
+                                You get a simple owner-friendly report every month.
+                            </p>
                         </div>
-                        <div className="flex items-center gap-1 bg-white px-4 py-2 rounded-lg border shadow-sm">
-                            <span className="text-2xl font-black text-gray-900">$19.99</span>
-                            <span className="text-gray-500 text-sm">/ mo</span>
+                        <div className="flex flex-col items-end">
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-4xl font-black text-gray-900">$19.99</span>
+                                <span className="text-gray-500 font-medium">/ month</span>
+                            </div>
+                            <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded mt-1">Cancel anytime</span>
                         </div>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-6">
-                        {/* Feature 1 */}
-                        <div className="bg-white p-6 rounded-xl border shadow-sm flex flex-col gap-3">
-                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                            </div>
-                            <h3 className="font-semibold text-gray-900">Traffic & Ranking</h3>
-                            <p className="text-sm text-gray-500">Know exactly how many people search for "{lead.category}" in {lead.city} and land on your site.</p>
-                        </div>
-                        {/* Feature 2: Social */}
-                        <div className="bg-white p-6 rounded-xl border shadow-sm flex flex-col gap-3">
-                            <div className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center text-pink-600">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                            </div>
-                            <h3 className="font-semibold text-gray-900">Reputation Watch</h3>
-                            <p className="text-sm text-gray-500">Instant alerts for new Google & Yelp reviews so you can respond in seconds.</p>
-                        </div>
-                        {/* Feature 3: Connect */}
-                        <div className="bg-white p-6 rounded-xl border shadow-sm flex flex-col gap-3 relative overflow-hidden">
-                            {/* Mock "Connected" state if we have links */}
-                            {lead.enrichment_data?.contact_info?.social_platforms ? (
-                                <div className="absolute top-2 right-2 flex -space-x-2">
-                                    {/* Mock avatars */}
-                                    <div className="w-6 h-6 rounded-full bg-blue-600 border-2 border-white"></div>
-                                    <div className="w-6 h-6 rounded-full bg-pink-600 border-2 border-white"></div>
+                    <div className="grid md:grid-cols-2 gap-x-12 gap-y-10">
+                        {/* 1. Performance Trends */}
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
                                 </div>
-                            ) : null}
-                            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                <h3 className="font-bold text-lg">Performance Trends</h3>
                             </div>
-                            <h3 className="font-semibold text-gray-900">Competitor Spy</h3>
-                            <p className="text-sm text-gray-500">See when your competitors change their prices or launch new ads.</p>
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                                We track whether key signals are moving up, down, or flat. You’ll always know: <br />
+                                <em className="text-gray-800">“Are things getting better — or quietly slipping?”</em>
+                            </p>
+                            <ul className="text-xs text-gray-500 space-y-1">
+                                <li>• Website activity & visitor volume</li>
+                                <li>• Inquiry & call volume trends</li>
+                                <li>• Missed calls & after-hours risk</li>
+                            </ul>
                         </div>
+
+                        {/* 2. Website Health */}
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                                </div>
+                                <h3 className="font-bold text-lg">Website Health</h3>
+                            </div>
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                                We monitor your site 24/7 without rebuilding it. If something breaks or slows down, it’s flagged immediately.
+                            </p>
+                            <ul className="text-xs text-gray-500 space-y-1">
+                                <li>• Contact forms working vs broken</li>
+                                <li>• Uptime & accessibility checks</li>
+                                <li>• Mobile usability flags</li>
+                            </ul>
+                        </div>
+
+                        {/* 3. Calls & Inquiry Capture */}
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center text-green-600">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                                </div>
+                                <h3 className="font-bold text-lg">Calls & Inquiries</h3>
+                            </div>
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                                Critical for service businesses. This shows whether demand is being captured or lost month-to-month.
+                            </p>
+                            <ul className="text-xs text-gray-500 space-y-1">
+                                <li>• Total calls vs missed calls</li>
+                                <li>• Response-time signals</li>
+                                <li>• Quote request ease-of-use</li>
+                            </ul>
+                        </div>
+
+                        {/* 4. Google Listing Monitor */}
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center text-yellow-600">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                </div>
+                                <h3 className="font-bold text-lg">Google Listing</h3>
+                            </div>
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                                Since Google is the #1 source of local leads, we watch it like a hawk. If hours or info change, you'll know.
+                            </p>
+                            <ul className="text-xs text-gray-500 space-y-1">
+                                <li>• Listing views and actions trend</li>
+                                <li>• Review changes & reputation watch</li>
+                                <li>• Visibility shifts affecting directions</li>
+                            </ul>
+                        </div>
+
+                        {/* 5. Social Activity */}
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center text-pink-600">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>
+                                </div>
+                                <h3 className="font-bold text-lg">Social Activity</h3>
+                            </div>
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                                Quickly assess if your social effort is paying off. We track posting consistency and what's actually working.
+                            </p>
+                            <ul className="text-xs text-gray-500 space-y-1">
+                                <li>• Engagement trends (likes/shares)</li>
+                                <li>• Inactivity warnings</li>
+                                <li>• Most effective recent posts</li>
+                            </ul>
+                        </div>
+
+                        {/* 6. Alerts & Warnings */}
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                </div>
+                                <h3 className="font-bold text-lg">Alerts & Ratings</h3>
+                            </div>
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                                Antivirus for your online presence. We flag broken forms, missing hours, or sudden drops in visibility.
+                            </p>
+                            <ul className="text-xs text-gray-500 space-y-1">
+                                <li>• "Broken form" alerts</li>
+                                <li>• Sudden ranking drops</li>
+                                <li>• Tracking failures</li>
+                            </ul>
+                        </div>
+
                     </div>
                 </div>
 
