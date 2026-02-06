@@ -17,7 +17,19 @@ const EnrichmentSchema = z.object({
     }),
     contact_info: z.object({
         emails_found: z.array(z.string()),
-        social_links: z.array(z.string()),
+        social_platforms: z.object({
+            facebook: z.string().optional(),
+            instagram: z.string().optional(),
+            linkedin: z.string().optional(),
+            twitter: z.string().optional(),
+            youtube: z.string().optional(),
+        }),
+    }),
+    monitoring_signals: z.object({
+        social_activity_level: z.string().describe("Estimate: High, Medium, Low, or Dormant based on clues"),
+        website_update_frequency: z.string().describe("Estimate: dynamic/modern or static/outdated"),
+        review_freshness: z.string().describe("Comment on review recency"),
+        missing_channels: z.array(z.string()).describe("List major channels they are missing"),
     }),
     outreach_hook: z.string().describe("A personalized single sentence hook for a cold email based on findings."),
 })
@@ -42,9 +54,10 @@ export async function POST(request: Request) {
         const { data: lead } = await supabase.from('leads').select('*').eq('id', lead_id).single()
         if (!lead) throw new Error("Lead not found")
 
-        // 3. Scrape Website Content (Simple)
+        // 3. Scrape Website Content (Smart)
         let websiteText = ""
-        let websiteHtml = ""
+        let socialLinksFound: string[] = []
+
         const url = lead.website_url || lead.website
         if (url) {
             try {
@@ -56,10 +69,18 @@ export async function POST(request: Request) {
                     signal: controller.signal
                 })
                 if (res.ok) {
-                    websiteHtml = await res.text()
-                    const $ = cheerio.load(websiteHtml)
+                    const html = await res.text()
+                    const $ = cheerio.load(html)
                     $('script, style').remove()
                     websiteText = $('body').text().slice(0, 8000) // Limit tokens
+
+                    // Extract Social Links explicitly for AI
+                    $('a').each((_, el) => {
+                        const href = $(el).attr('href')
+                        if (href && (href.includes('facebook.com') || href.includes('instagram.com') || href.includes('linkedin.com') || href.includes('twitter.com') || href.includes('youtube.com'))) {
+                            socialLinksFound.push(href)
+                        }
+                    })
                 }
             } catch (e) {
                 console.error("Scrape failed", e)
@@ -69,7 +90,7 @@ export async function POST(request: Request) {
 
         // 4. Construct Prompt
         const prompt = `
-       Analyze this business for a B2B service agency (Lead2Close) that helps local businesses with automated lead capture, CRM setting, and website improvements.
+       Analyze this business for a B2B service agency (Lead2Close).
        
        Business: ${lead.business_name}
        City: ${lead.city}
@@ -77,13 +98,17 @@ export async function POST(request: Request) {
        Google Rating: ${lead.rating} (${lead.review_count} reviews)
        Google Data: ${JSON.stringify(lead.google_working_hours || {})}
        
+       Possible Social Links Found: ${socialLinksFound.join(', ')}
+       
        Website Content Preview:
        ${websiteText.replace(/\s+/g, ' ').trim()}
        
        Task:
        1. Identify strengths and weaknesses.
-       2. Look for contact emails in text.
-       3. Estimate how tech-savvy they are.
+       2. Confirm social media links and put them in the correct fields.
+       3. "Monitoring Signals": Estimate their digital heartbeat. 
+          - Are they active on social? (If we found links, assume 'Visible', if links are broken or missing, 'Dormant').
+          - Does the site look updated?
        4. Suggest a specific outreach hook.
      `
 

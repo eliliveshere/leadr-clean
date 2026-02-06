@@ -30,6 +30,7 @@ export async function getPublicLead(id: string) {
         scan_summary: lead.scan_summary,
         scan_reasons: lead.scan_reasons,
         google_full_address: lead.google_full_address,
-        enrichment_data: lead.enrichment_data
+        enrichment_data: lead.enrichment_data,
+        category: lead.category
     }
 }

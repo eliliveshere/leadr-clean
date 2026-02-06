@@ -115,6 +115,69 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
                     )}
                 </div>
 
+                {/* Digital Footprint & Monitoring Card */}
+                {lead.enrichment_data?.contact_info?.social_platforms && (
+                    <div className="border p-4 rounded bg-white shadow-sm flex flex-col space-y-4">
+                        <h2 className="font-semibold text-lg flex items-center gap-2">
+                            Digital Footprint
+                            <span className="text-xs bg-black text-white px-2 py-0.5 rounded-full">Monitoring Active</span>
+                        </h2>
+
+                        {/* Social Links */}
+                        <div className="space-y-2">
+                            <h3 className="text-xs font-medium text-gray-500 uppercase">Social Channels</h3>
+                            <div className="flex flex-wrap gap-2">
+                                {Object.entries(lead.enrichment_data.contact_info.social_platforms).map(([platform, url]) => (
+                                    url ? (
+                                        <a href={url as string} target="_blank" key={platform} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border hover:bg-gray-50 text-sm capitalize">
+                                            {/* Simple icons based on name */}
+                                            <span className={`w-2 h-2 rounded-full ${platform === 'facebook' ? 'bg-blue-600' : platform === 'instagram' ? 'bg-pink-600' : 'bg-gray-400'}`}></span>
+                                            {platform}
+                                        </a>
+                                    ) : null
+                                ))}
+                                {Object.values(lead.enrichment_data.contact_info.social_platforms).every(x => !x) && (
+                                    <span className="text-sm text-gray-400 italic">No social profiles found.</span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Monitoring Signals */}
+                        {lead.enrichment_data.monitoring_signals && (
+                            <div className="space-y-4 pt-4 border-t">
+                                <h3 className="text-xs font-medium text-gray-500 uppercase">Live Signals</h3>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-3 bg-gray-50 rounded border">
+                                        <span className="text-xs text-gray-500 block">Social Activity</span>
+                                        <div className="font-medium text-sm mt-1">{lead.enrichment_data.monitoring_signals.social_activity_level}</div>
+                                    </div>
+                                    <div className="p-3 bg-gray-50 rounded border">
+                                        <span className="text-xs text-gray-500 block">Website Status</span>
+                                        <div className="font-medium text-sm mt-1">{lead.enrichment_data.monitoring_signals.website_update_frequency}</div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <span className="text-xs text-gray-500 block mb-1">Review Freshness</span>
+                                    <div className="text-sm text-gray-700">{lead.enrichment_data.monitoring_signals.review_freshness}</div>
+                                </div>
+
+                                {lead.enrichment_data.monitoring_signals.missing_channels?.length > 0 && (
+                                    <div className="bg-red-50 p-3 rounded border border-red-100">
+                                        <span className="text-xs font-bold text-red-600 uppercase block mb-1">Opportunity: Missing Channels</span>
+                                        <div className="text-sm text-red-800">
+                                            They are missing: {lead.enrichment_data.monitoring_signals.missing_channels.join(', ')}.
+                                            <br />
+                                            <span className="text-xs opacity-75">Pitch: "We can set these up for you."</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <div className="border p-4 rounded bg-white shadow-sm flex flex-col space-y-4">
                     <h2 className="font-semibold text-lg">Qualification Scanner</h2>
                     {/* ... scanner content ... */}

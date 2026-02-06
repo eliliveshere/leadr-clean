@@ -142,6 +142,56 @@ export default async function AuditPage(props: { params: Promise<{ id: string }>
                     </div>
                 </div>
 
+                {/* Monthly Monitoring Upsell - New Product */}
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8 md:p-10 space-y-8">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <div className="text-sm font-bold text-purple-600 uppercase tracking-widest mb-1">Recommended Solution</div>
+                            <h2 className="text-2xl font-bold text-gray-900">24/7 Digital Performance Monitoring</h2>
+                            <p className="text-gray-500 mt-2 max-w-md">Don't let your score drop again. We track your reputation, uptime, and rankings automatically.</p>
+                        </div>
+                        <div className="flex items-center gap-1 bg-white px-4 py-2 rounded-lg border shadow-sm">
+                            <span className="text-2xl font-black text-gray-900">$19.99</span>
+                            <span className="text-gray-500 text-sm">/ mo</span>
+                        </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-6">
+                        {/* Feature 1 */}
+                        <div className="bg-white p-6 rounded-xl border shadow-sm flex flex-col gap-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                            </div>
+                            <h3 className="font-semibold text-gray-900">Traffic & Ranking</h3>
+                            <p className="text-sm text-gray-500">Know exactly how many people search for "{lead.category}" in {lead.city} and land on your site.</p>
+                        </div>
+                        {/* Feature 2: Social */}
+                        <div className="bg-white p-6 rounded-xl border shadow-sm flex flex-col gap-3">
+                            <div className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center text-pink-600">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                            </div>
+                            <h3 className="font-semibold text-gray-900">Reputation Watch</h3>
+                            <p className="text-sm text-gray-500">Instant alerts for new Google & Yelp reviews so you can respond in seconds.</p>
+                        </div>
+                        {/* Feature 3: Connect */}
+                        <div className="bg-white p-6 rounded-xl border shadow-sm flex flex-col gap-3 relative overflow-hidden">
+                            {/* Mock "Connected" state if we have links */}
+                            {lead.enrichment_data?.contact_info?.social_platforms ? (
+                                <div className="absolute top-2 right-2 flex -space-x-2">
+                                    {/* Mock avatars */}
+                                    <div className="w-6 h-6 rounded-full bg-blue-600 border-2 border-white"></div>
+                                    <div className="w-6 h-6 rounded-full bg-pink-600 border-2 border-white"></div>
+                                </div>
+                            ) : null}
+                            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            </div>
+                            <h3 className="font-semibold text-gray-900">Competitor Spy</h3>
+                            <p className="text-sm text-gray-500">See when your competitors change their prices or launch new ads.</p>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Final CTA Strip */}
                 <div className="relative overflow-hidden bg-black text-white rounded-3xl p-8 md:p-12 text-center space-y-8 shadow-2xl">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500"></div>
