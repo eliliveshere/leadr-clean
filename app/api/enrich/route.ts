@@ -101,8 +101,24 @@ export async function POST(request: Request) {
                         lead.rating = place.rating
                         lead.review_count = place.userRatingCount
                         lead.google_working_hours = place.currentOpeningHours
+                        lead.search_context = JSON.stringify(place) // Store raw data for debugging?
 
-                        // Also update Supabase proactively? No, enrichment_data update handles status.
+                        // Critical: If Google found a website and we don't have one (or trust Google more), use it!
+                        if (place.websiteUri) {
+                            console.log("Updating Website from Google:", place.websiteUri)
+                            lead.website = place.websiteUri
+                            lead.website_url = place.websiteUri // Ensure consistency
+                        }
+
+                        // Save Google Data to Supabase immediately
+                        await supabase.from('leads').update({
+                            rating: place.rating,
+                            review_count: place.userRatingCount,
+                            address: place.formattedAddress,
+                            website: place.websiteUri || lead.website, // Prefer Google or keep existing
+                            google_maps_url: place.googleMapsUri,
+                            google_working_hours: place.currentOpeningHours
+                        }).eq('id', lead.id)
                     }
                 } else {
                     console.error("Google Places API Error:", await gRes.text())
