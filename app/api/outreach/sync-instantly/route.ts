@@ -13,35 +13,66 @@ interface InstantlyLead {
 // Helper to push a single lead to Instantly
 // Helper to push a single lead to Instantly
 async function pushLeadToInstantly(leadData: InstantlyLead, apiKey: string, campaignId?: string) {
-    console.log(`--> Pushing to Instantly: ${leadData.email} (Campaign: ${campaignId})`)
+    // Detect API Version based on key format
+    const isV2 = apiKey.length > 50
+    const version = isV2 ? 'v2' : 'v1'
 
-    // Cleanup: Remove internal flags from custom_variables if any
+    console.log(`--> Pushing to Instantly (${version}): ${leadData.email} (Campaign: ${campaignId})`)
+
+    // Cleanup internal flags
     const finalLead = { ...leadData }
     if (finalLead.custom_variables) {
-        // Create a clean copy to avoid mutating original if needed
         finalLead.custom_variables = { ...finalLead.custom_variables }
         delete finalLead.custom_variables.campaign_id
     }
 
     try {
-        const body = {
-            api_key: apiKey,
-            campaign_id: campaignId,
-            skip_if_in_workspace: false, // Changed to false for debugging? No, keep true but log result.
-            leads: [finalLead]
+        let url = ''
+        let options: RequestInit = {}
+
+        if (isV2) {
+            // API V2 (Bearer Token)
+            // Assuming endpoint is /api/v2/leads
+            url = 'https://api.instantly.ai/api/v2/leads'
+            options = {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    email: finalLead.email,
+                    first_name: finalLead.first_name,
+                    last_name: finalLead.last_name,
+                    company_name: finalLead.company_name,
+                    website: finalLead.website,
+                    campaign_id: campaignId,
+                    skip_if_in_workspace: true,
+                    custom_variables: finalLead.custom_variables
+                })
+            }
+        } else {
+            // API V1 (Legacy)
+            url = 'https://api.instantly.ai/api/v1/lead/add'
+            options = {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    api_key: apiKey,
+                    campaign_id: campaignId,
+                    skip_if_in_workspace: true,
+                    leads: [finalLead]
+                })
+            }
         }
 
-        const response = await fetch('https://api.instantly.ai/api/v1/lead/add', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        })
-
+        const response = await fetch(url, options)
         const responseText = await response.text()
-        console.log(`Instantly Response (${response.status}):`, responseText)
+        // Log brief response status
+        console.log(`Instantly ${version.toUpperCase()} Response (${response.status}):`, responseText.substring(0, 500))
 
         if (!response.ok) {
-            console.error("Instantly API Failed:", responseText)
+            console.error(`Instantly ${version.toUpperCase()} API Failed:`, responseText)
             return false
         }
 
