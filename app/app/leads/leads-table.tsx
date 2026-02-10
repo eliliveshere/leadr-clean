@@ -4,15 +4,47 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Link2, Sparkles, Zap, Loader2, CheckCircle2, AlertCircle, Download } from 'lucide-react'
+import { Link2, Sparkles, Zap, Loader2, CheckCircle2, AlertCircle, Download, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
+    // ... states ...
     const [leads, setLeads] = useState(initialLeads)
     const [selected, setSelected] = useState<string[]>([])
     const [scanning, setScanning] = useState(false)
     const [enriching, setEnriching] = useState(false)
+    const [deleting, setDeleting] = useState(false) // New state
     const [progress, setProgress] = useState<{ completed: number, total: number } | null>(null)
+
+    // ... useEffect ...
+
+    // ... helper functions ...
+
+    const handleDelete = async () => {
+        if (selected.length === 0) return
+        if (!window.confirm(`Are you sure you want to delete ${selected.length} leads? This cannot be undone.`)) return
+
+        setDeleting(true)
+        const supabase = createClient()
+        const { error } = await supabase
+            .from('leads')
+            .delete()
+            .in('id', selected)
+
+        if (error) {
+            toast.error("Failed to delete leads")
+            setDeleting(false)
+            return
+        }
+
+        toast.success(`Deleted ${selected.length} leads`)
+        setDeleting(false)
+        setSelected([])
+        router.refresh()
+    }
+
+    // ... render ... 
+
 
     useEffect(() => {
         setLeads(initialLeads)
@@ -202,10 +234,10 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
             <div className="flex gap-2 mb-4 items-center bg-gray-50 p-3 rounded-lg border">
                 <span className="text-sm font-medium text-gray-500 mr-2">Bulk Actions ({selected.length}):</span>
 
-                {scanning || enriching ? (
+                {scanning || enriching || deleting ? (
                     <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded text-sm flex items-center gap-2 animate-pulse">
                         <Loader2 className="animate-spin h-4 w-4" />
-                        {scanning ? 'Scanning...' : 'Processing...'}
+                        {scanning ? 'Scanning...' : enriching ? 'Processing...' : 'Deleting...'}
                         {progress ? `${progress.completed}/${progress.total}` : ''}
                     </div>
                 ) : (
@@ -265,10 +297,19 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
                         <button
                             onClick={addToQueue}
                             disabled={selected.length === 0}
-                            className="bg-black text-white hover:bg-gray-800 px-3 py-1.5 rounded text-sm flex items-center gap-2 disabled:opacity-50 transition-colors"
+                            className="hidden bg-black text-white hover:bg-gray-800 px-3 py-1.5 rounded text-sm flex items-center gap-2 disabled:opacity-50 transition-colors"
                         >
                             <span className="w-2 h-2 rounded-full bg-green-500"></span>
                             Start Outreach Queue
+                        </button>
+                        <button
+                            onClick={handleDelete}
+                            disabled={selected.length === 0}
+                            className="ml-auto bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded text-sm flex items-center gap-2 disabled:opacity-50 transition-colors"
+                            title="Delete Selected"
+                        >
+                            <Trash2 className="w-3 h-3" />
+                            Delete
                         </button>
                     </>
                 )}
