@@ -153,7 +153,7 @@ export async function POST(request: Request) {
         const payload: InstantlyLead = {
             email: email,
             first_name: enriched.found_first_name || '',
-            last_name: '',
+            last_name: enriched.found_last_name || '',
             company_name: lead.business_name,
             website: lead.website_url || lead.website || '',
             custom_variables: {
@@ -163,6 +163,11 @@ export async function POST(request: Request) {
                 quick_win_3: quickWins[2] || '',
                 estimated_lift: enriched.estimated_lift || '',
                 primary_service: enriched.primary_service || '',
+
+                // Contact / Business
+                title: enriched.found_title || '',
+                location: lead.city || '',
+                linkedin: lead.enrichment_data?.contact_info?.social_platforms?.linkedin || '',
 
                 // Meta
                 source: 'Lead2Close'
