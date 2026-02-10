@@ -60,7 +60,10 @@ export async function POST(request: Request) {
 
         // 4. Construct Prompt
         const prompt = `
-       You are Anti-Gravity. Your job is to generate a concise, owner-friendly Digital Performance Audit for the Lead2Close app.
+       You are Anti-Gravity. Your job is to analyze this business for two purposes:
+       1. Generate a concise, owner-friendly Digital Performance Audit for the web view.
+       2. Generate specific data points for a cold email campaign (Instantly.ai).
+
        Do NOT use technical jargon or buzzwords. The audience is a local business owner — keep it simple, clear, and credible.
        
        Business: ${lead.business_name}
@@ -74,12 +77,24 @@ export async function POST(request: Request) {
        Website Content Preview:
        ${websiteText.replace(/\s+/g, ' ').trim()}
        
-       Task:
+       Task 1 (Audit Report):
        1. Identify 3-5 "Current Strengths" (High Google rating, 24/7 services, etc).
        2. Identify 3-5 "Critical Gaps" (Contact form hard to find, missing hours, no social visibility, etc).
        3. Extract contact info & social links.
        4. Determine "Monitoring Signals" status.
        5. Write a simple "Impact Analysis" sentence summarizing their score impact.
+
+       Task 2 (Email Data for Export):
+       1. Determine 'primary_service' (e.g. "Plumbing services", "Dental clinic").
+       2. Determine 'primary_conversion_goal' (Phone calls, Form submissions, Bookings, Store visits).
+       3. Guess 'likely_traffic_source' (Google Search, Maps, Paid, etc).
+       4. Identify 3 specific "Quick Wins". These must be 1-step fixes, observable, no jargon.
+          - Bad: "Improve UX friction"
+          - Good: "Make phone number sticky on mobile"
+          - Good: "Move reviews above contact form"
+          - Good: "Add after-hours call capture"
+       5. Estimate 'estimated_lift' (e.g. "10-20%", "15%").
+       6. Try to find a 'first_name' of an owner or contact person if mentioned in the text (e.g. "Hi, I'm Dr. Smith").
 
        RETURN JSON ONLY. Structure:
        {
@@ -90,6 +105,14 @@ export async function POST(request: Request) {
              "improvement_opportunities": ["Opp 1", "Opp 2"],
              "estimated_tech_savviness": "low|medium|high",
              "impact_analysis": "One sentence summarizing how their score translates to visibility or missed opportunities."
+         },
+         "email_data": {
+             "primary_service": "...",
+             "primary_conversion_goal": "...",
+             "likely_traffic_source": "...",
+             "quick_wins": ["Win 1", "Win 2", "Win 3"],
+             "estimated_lift": "10-20%",
+             "found_first_name": "Name or null"
          },
          "contact_info": {
              "emails_found": ["..."],

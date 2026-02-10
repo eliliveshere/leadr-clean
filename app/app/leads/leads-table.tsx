@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Link2, Sparkles, Zap, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Link2, Sparkles, Zap, Loader2, CheckCircle2, AlertCircle, Download } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
@@ -13,6 +13,10 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
     const [scanning, setScanning] = useState(false)
     const [enriching, setEnriching] = useState(false)
     const [progress, setProgress] = useState<{ completed: number, total: number } | null>(null)
+
+    useEffect(() => {
+        setLeads(initialLeads)
+    }, [initialLeads])
 
     const router = useRouter()
 
@@ -34,6 +38,48 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
         const url = `${window.location.origin}/audit/${id}`
         navigator.clipboard.writeText(url)
         toast.success("Audit link copied!")
+    }
+
+    const downloadCSV = () => {
+        if (selected.length === 0) return
+
+        const selectedLeads = leads.filter((l: any) => selected.includes(l.id))
+
+        // Define headers
+        const headers = ['company_name', 'website', 'first_name', 'quick_win_1', 'quick_win_2', 'quick_win_3', 'estimated_lift']
+
+        const rows = selectedLeads.map((l: any) => {
+            const data = l.enrichment_data?.email_data || {}
+            const wins = data.quick_wins || []
+
+            // Helper to escape CSV fields
+            const clean = (text: string) => {
+                const safe = (text || '').replace(/"/g, '""'); // Escape double quotes
+                return `"${safe}"`
+            }
+
+            return [
+                clean(l.business_name),
+                clean(l.website_url || l.website),
+                clean(data.found_first_name || ''),
+                clean(wins[0] || ''),
+                clean(wins[1] || ''),
+                clean(wins[2] || ''),
+                clean(data.estimated_lift || '')
+            ].join(',')
+        })
+
+        const csvContent = [headers.join(','), ...rows].join('\n')
+
+        // Create download link
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', `leads_export_${new Date().toISOString().split('T')[0]}.csv`)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
     }
 
     // Reuse existing scan logic
@@ -179,6 +225,14 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
                         >
                             <Sparkles className="w-3 h-3 text-purple-600" />
                             Enrich
+                        </button>
+                        <button
+                            onClick={downloadCSV}
+                            disabled={selected.length === 0}
+                            className="bg-white border text-black hover:bg-gray-100 px-3 py-1.5 rounded text-sm flex items-center gap-2 disabled:opacity-50 transition-colors"
+                        >
+                            <Download className="w-3 h-3" />
+                            Export CSV
                         </button>
                         <button
                             onClick={addToQueue}
