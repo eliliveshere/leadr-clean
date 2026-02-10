@@ -64,8 +64,8 @@ export async function POST(request: Request) {
     }
 
     // You mentioned the key is INSTANTLY_API_KEY in Vercel
-    // You mentioned the key is INSTANTLY_API_KEY in Vercel
-    const apiKey = (process.env.INSTANTLY_API_KEY || '').trim()
+    const rawKey = process.env.INSTANTLY_API_KEY || ''
+    const apiKey = rawKey.trim().replace(/^["']|["']$/g, '')
 
     if (!apiKey) {
         console.error("Server Config Error: Missing INSTANTLY_API_KEY")
