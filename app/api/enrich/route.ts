@@ -207,16 +207,42 @@ export async function POST(request: Request) {
         })
 
         const content = completion.choices[0].message.content
-        const enrichmentData = content ? JSON.parse(content) : null
+        const newEnrichmentData = content ? JSON.parse(content) : {}
 
-        console.log("Enrichment Success:", JSON.stringify(enrichmentData, null, 2))
+        // Merge logic: Preserve manually imported fields (CSV) if AI returns null/missing
+        const existingData = lead.enrichment_data || {}
+        const mergedData = {
+            ...newEnrichmentData,
+            email_data: {
+                ...newEnrichmentData.email_data,
+                // Prefer CSV/Imported names if AI didn't find one
+                found_first_name: newEnrichmentData.email_data?.found_first_name || existingData.email_data?.found_first_name,
+                found_last_name: newEnrichmentData.email_data?.found_last_name || existingData.email_data?.found_last_name,
+                found_title: newEnrichmentData.email_data?.found_title || existingData.email_data?.found_title
+            },
+            contact_info: {
+                ...newEnrichmentData.contact_info,
+                social_platforms: {
+                    ...newEnrichmentData.contact_info?.social_platforms,
+                    // Preserve imported social links if available and AI missed them
+                    linkedin: newEnrichmentData.contact_info?.social_platforms?.linkedin || existingData.contact_info?.social_platforms?.linkedin,
+                    facebook: newEnrichmentData.contact_info?.social_platforms?.facebook || existingData.contact_info?.social_platforms?.facebook
+                },
+                // Merge emails? Usually AI finds better ones or same
+                emails_found: newEnrichmentData.contact_info?.emails_found?.length > 0
+                    ? newEnrichmentData.contact_info.emails_found
+                    : (existingData.contact_info?.emails_found || [])
+            }
+        }
+
+        console.log("Enrichment Success (Merged):", JSON.stringify(mergedData, null, 2))
 
         // 6. Save Result
         await supabase.from('leads').update({
-            enrichment_status: 'enriched',
+            enrichment_status: mergedData.email_data?.found_first_name ? 'enriched' : 'enriched_no_contact',
             enrichment_last_at: new Date().toISOString(),
-            enrichment_data: enrichmentData
-        }).eq('id', lead_id)
+            enrichment_data: mergedData
+        }).eq('id', lead.id)
 
     } catch (err: any) {
         console.error("Enrichment API Error:", err)
