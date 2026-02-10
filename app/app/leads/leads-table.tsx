@@ -228,7 +228,8 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
                         </button>
                         <button
                             onClick={async () => {
-                                const campaignId = window.prompt("Enter Instantly Campaign ID (Optional):", "")
+                                // Default Campaign ID: 2693b890-5098-46f0-95e5-9bb41da97f10
+                                const campaignId = window.prompt("Enter Instantly Campaign ID:", "2693b890-5098-46f0-95e5-9bb41da97f10")
                                 if (campaignId === null) return // Cancelled
 
                                 setEnriching(true)
