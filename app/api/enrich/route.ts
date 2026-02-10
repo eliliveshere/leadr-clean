@@ -81,22 +81,26 @@ export async function POST(request: Request) {
                 const $s = cheerio.load(searchHtml)
                 const searchResults: string[] = []
 
-                // DDG HTML results are usually in .result__a
-                $s('.result__a').each((i: number, el: any) => {
-                    if (i > 5) return // Top 5 results
-                    const title = $s(el).text()
-                    const link = $s(el).attr('href')
-                    if (link && !link.includes('duckduckgo.com')) {
-                        searchResults.push(`- ${title}: ${link}`)
+                // Improved scraping: iterate over result containers to get snippets
+                $s('.result').each((i: number, el: any) => {
+                    const linkEl = $s(el).find('a.result__a')
+                    const snippet = $s(el).find('.result__snippet').text().trim()
+                    const link = linkEl.attr('href')
+                    const title = linkEl.text().trim()
 
-                        // Capture socials from search results
+                    if (i > 5) return
+
+                    if (link && !link.includes('duckduckgo.com')) {
+                        searchResults.push(`- [${title}](${link})\n  Snippet: ${snippet}`)
+                        // Capture socials logic...
                         if (link.includes('facebook.com') && !socialLinksFound.some(l => l.includes('facebook'))) socialLinksFound.push(link)
                         if (link.includes('instagram.com') && !socialLinksFound.some(l => l.includes('instagram'))) socialLinksFound.push(link)
                         if (link.includes('linkedin.com') && !socialLinksFound.some(l => l.includes('linkedin'))) socialLinksFound.push(link)
                     }
                 })
 
-                searchContext = searchResults.join('\n')
+                searchContext = searchResults.join('\n\n')
+
             }
         } catch (e) {
             console.error("Web Search failed", e)
@@ -104,97 +108,97 @@ export async function POST(request: Request) {
 
         // 4. Construct Prompt
         const prompt = `
-       You are Anti-Gravity. Your job is to analyze this business for two purposes:
-       1. Generate a concise, owner-friendly Digital Performance Audit for the web view.
-       2. Generate specific data points for a cold email campaign (Instantly.ai).
+You are Anti-Gravity. Your job is to analyze this business for two purposes:
+1. Generate a concise, owner-friendly Digital Performance Audit for the web view.
+2. Generate specific data points for a cold email campaign (Instantly.ai).
 
-       **CRITICAL FIRST STEP: CLASSIFY THE BUSINESS**
-       Determine if this business is:
-       Type A: **Local Service / B2C** (Plumber, Dentist, Restaurant, Retail, Gym)
-       Type B: **Professional B2B / Industrial** (Engineering, Manufacturer, Consultant, Law Firm, Wholesaler)
+**CRITICAL FIRST STEP: CLASSIFY THE BUSINESS**
+Determine if this business is:
+Type A: **Local Service / B2C** (Plumber, Dentist, Restaurant, Retail, Gym)
+Type B: **Professional B2B / Industrial** (Engineering, Manufacturer, Consultant, Law Firm, Wholesaler)
 
-       **APPLY THESE RULES BASED ON CLASSIFICATION:**
+**APPLY THESE RULES BASED ON CLASSIFICATION:**
 
-       [IF TYPE A - LOCAL B2C]:
-       - **Focus:** Google Maps ranking, Reviews quantity, "Open Now" hours, Missed calls, Social activity (IG/FB).
-       - **Framing:** "You are losing customers to competitors."
-       - **Metric:** Missed revenue / leads.
+[IF TYPE A - LOCAL B2C]:
+- **Focus:** Google Maps ranking, Reviews quantity, "Open Now" hours, Missed calls, Social activity (IG/FB).
+- **Framing:** "You are losing customers to competitors."
+- **Metric:** Missed revenue / leads.
 
-       [IF TYPE B - PROFESSIONAL B2B]:
-       - **Focus:** Trust & Legitimacy, LinkedIn presence, Website clarity, "Ghost Company" signals (broken links, 2019 copyright), Verification.
-       - **IGNORE:** Instagram/TikTok, Daily posting, After-hours availability (irrelevant).
-       - **Framing:** "You are failing due diligence checks." or "Your referral traffic is bouncing."
-       - **Metric:** Reputation / Trust / RFP Win Rate.
-       - **Quick Wins:** Focus on LinkedIn completeness, Website trust signals (About Us, Projects), Contact form friction. NOT "post more reels".
+[IF TYPE B - PROFESSIONAL B2B]:
+- **Focus:** Trust & Legitimacy, LinkedIn presence, Website clarity, "Ghost Company" signals (broken links, 2019 copyright), Verification.
+- **IGNORE:** Instagram/TikTok, Daily posting, After-hours availability (irrelevant).
+- **Framing:** "You are failing due diligence checks." or "Your referral traffic is bouncing."
+- **Metric:** Reputation / Trust / RFP Win Rate.
+- **Quick Wins:** Focus on LinkedIn completeness, Website trust signals (About Us, Projects), Contact form friction. NOT "post more reels".
 
-       --- 
-       
-       Business: ${lead.business_name}
-       City: ${lead.city}
-       Category: ${lead.category}
-       Google Rating: ${lead.rating} (${lead.review_count} reviews)
-       Google Data: ${JSON.stringify(lead.google_working_hours || {})}
-       
-       Possible Social Links Found: ${Array.from(new Set(socialLinksFound)).join(', ')}
+--- 
+ 
+Business: ${lead.business_name}
+City: ${lead.city}
+Category: ${lead.category}
+Google Rating: ${lead.rating} (${lead.review_count} reviews)
+Google Data: ${JSON.stringify(lead.google_working_hours || {})}
+ 
+Possible Social Links Found: ${Array.from(new Set(socialLinksFound)).join(', ')}
 
-       Web Search Findings (Reviews/Profiles):
-       ${searchContext || "No external search data found."}
-       
-       Website Content Preview:
-       ${websiteText.replace(/\s+/g, ' ').trim()}
-       
-       ---
+Web Search Findings (Reviews/Profiles):
+${searchContext || "No external search data found."}
+ 
+Website Content Preview:
+${websiteText.replace(/\s+/g, ' ').trim()}
+ 
+---
 
-       Task 1 (Audit Report):
-       1. Identify 3-5 "Current Strengths" (Strictly relevant to their Type).
-       2. Identify 3-5 "Critical Gaps" (Strictly relevant to their Type).
-       3. Extract contact info & social links.
-       4. Determine "Monitoring Signals" status.
-       5. Write a simple "Impact Analysis" sentence summarizing their score impact.
+Task 1 (Audit Report):
+1. Identify 3-5 "Current Strengths" (Strictly relevant to their Type).
+2. Identify 3-5 "Critical Gaps" (Strictly relevant to their Type).
+3. Extract contact info & social links.
+4. Determine "Monitoring Signals" status.
+5. Write a simple "Impact Analysis" sentence summarizing their score impact.
 
-       Task 2 (Email Data for Export):
-       1. Determine 'primary_service'.
-       2. Determine 'primary_conversion_goal' (B2C calls vs B2B inquiries).
-       3. Guess 'likely_traffic_source' (B2C Maps vs B2B Referrals/Direct).
-       4. Identify 3 specific "Quick Wins".
-          - **For B2B:** "Update Copyright Year", "Fix broken LinkedIn link", "Add 'Projects' section", "Make email clickable".
-          - **For B2C:** "Sticky mobile call button", "Add hours to Google", "Respond to reviews".
-          - **Constraint:** Must be 1-step fixes, observable, no jargon.
-       5. Estimate 'estimated_lift' (e.g. "10-20% trust", "15% leads").
-       6. Try to find a 'first_name' of an owner.
+Task 2 (Email Data for Export):
+1. Determine 'primary_service'.
+2. Determine 'primary_conversion_goal' (B2C calls vs B2B inquiries).
+3. Guess 'likely_traffic_source' (B2C Maps vs B2B Referrals/Direct).
+4. Identify 3 specific "Quick Wins".
+- **For B2B:** "Update Copyright Year", "Fix broken LinkedIn link", "Add 'Projects' section", "Make email clickable".
+- **For B2C:** "Sticky mobile call button", "Add hours to Google", "Respond to reviews".
+- **Constraint:** Must be 1-step fixes, observable, no jargon.
+5. Estimate 'estimated_lift' (e.g. "10-20% trust", "15% leads").
+6. Try to find a 'first_name' of an owner.
 
-       RETURN JSON ONLY. Structure:
-       {
-         "analysis": {
-             "business_type": "Local B2C | Professional B2B",
-             "business_summary": "Short 1-sentence summary.",
-             "key_strengths": ["..."], 
-             "weaknesses_or_gaps": ["..."],
-             "improvement_opportunities": ["..."],
-             "estimated_tech_savviness": "low|medium|high",
-             "impact_analysis": "One sentence impact summary."
-         },
-         "email_data": {
-             "primary_service": "...",
-             "primary_conversion_goal": "...",
-             "likely_traffic_source": "...",
-             "quick_wins": ["Win 1", "Win 2", "Win 3"],
-             "estimated_lift": "...",
-             "found_first_name": "Name or null"
-         },
-         "contact_info": {
-             "emails_found": ["..."],
-             "social_platforms": { "facebook": "...", "instagram": "...", "linkedin": "...", "twitter": "..." }
-         },
-         "monitoring_signals": {
-             "social_activity_level": "...",
-             "website_update_frequency": "...",
-             "review_freshness": "...",
-             "missing_channels": ["..."]
-         },
-         "outreach_hook": "Personalized hook based on their BUSINESS TYPE and GAPS."
-       }
-     `
+RETURN JSON ONLY. Structure:
+{
+"analysis": {
+"business_type": "Local B2C | Professional B2B",
+"business_summary": "Short 1-sentence summary.",
+"key_strengths": ["..."], 
+"weaknesses_or_gaps": ["..."],
+"improvement_opportunities": ["..."],
+"estimated_tech_savviness": "low|medium|high",
+"impact_analysis": "One sentence impact summary."
+},
+"email_data": {
+"primary_service": "...",
+"primary_conversion_goal": "...",
+"likely_traffic_source": "...",
+"quick_wins": ["Win 1", "Win 2", "Win 3"],
+"estimated_lift": "...",
+"found_first_name": "Name or null"
+},
+"contact_info": {
+"emails_found": ["..."],
+"social_platforms": { "facebook": "...", "instagram": "...", "linkedin": "...", "twitter": "..." }
+},
+"monitoring_signals": {
+"social_activity_level": "...",
+"website_update_frequency": "...",
+"review_freshness": "...",
+"missing_channels": ["..."]
+},
+"outreach_hook": "Personalized hook based on their BUSINESS TYPE and GAPS."
+}
+`
 
         // 5. Call OpenAI (JSON Mode)
         const completion = await openai.chat.completions.create({
