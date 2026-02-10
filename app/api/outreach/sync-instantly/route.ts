@@ -11,25 +11,37 @@ interface InstantlyLead {
 }
 
 // Helper to push a single lead to Instantly
-async function pushLeadToInstantly(payload: InstantlyLead, apiKey: string) {
-    console.log("--> Pushing to Instantly:", payload.email)
+// Helper to push a single lead to Instantly
+async function pushLeadToInstantly(leadData: InstantlyLead, apiKey: string, campaignId?: string) {
+    console.log(`--> Pushing to Instantly: ${leadData.email} (Campaign: ${campaignId})`)
+
+    // Cleanup: Remove internal flags from custom_variables if any
+    const finalLead = { ...leadData }
+    if (finalLead.custom_variables) {
+        // Create a clean copy to avoid mutating original if needed
+        finalLead.custom_variables = { ...finalLead.custom_variables }
+        delete finalLead.custom_variables.campaign_id
+    }
+
     try {
+        const body = {
+            api_key: apiKey,
+            campaign_id: campaignId,
+            skip_if_in_workspace: false, // Changed to false for debugging? No, keep true but log result.
+            leads: [finalLead]
+        }
+
         const response = await fetch('https://api.instantly.ai/api/v1/lead/add', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                api_key: apiKey,
-                campaign_id: payload.custom_variables.campaign_id, // Passed in custom_variables for now if needed, or we can handle it differently
-                skip_if_in_workspace: true,
-                leads: [payload] // The API accepts an array
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
         })
 
+        const responseText = await response.text()
+        console.log(`Instantly Response (${response.status}):`, responseText)
+
         if (!response.ok) {
-            const text = await response.text()
-            console.error(`Instantly API Error (${response.status}):`, text)
+            console.error("Instantly API Failed:", responseText)
             return false
         }
 
@@ -92,8 +104,8 @@ export async function POST(request: Request) {
         // Prepare Payload
         const payload: InstantlyLead = {
             email: email,
-            first_name: enriched.found_first_name || 'there', // Default fallback
-            last_name: '', // We often don't have this parsed separately
+            first_name: enriched.found_first_name || '',
+            last_name: '',
             company_name: lead.business_name,
             website: lead.website_url || lead.website || '',
             custom_variables: {
@@ -105,12 +117,11 @@ export async function POST(request: Request) {
                 primary_service: enriched.primary_service || '',
 
                 // Meta
-                source: 'Lead2Close',
-                campaign_id: campaign_id // Optional: if provided by UI
+                source: 'Lead2Close'
             }
         }
 
-        const pushed = await pushLeadToInstantly(payload, apiKey)
+        const pushed = await pushLeadToInstantly(payload, apiKey, campaign_id)
         if (pushed) successCount++
         else failureCount++
     }
