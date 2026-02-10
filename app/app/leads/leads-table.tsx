@@ -274,11 +274,15 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
                                             campaign_id: campaignId
                                         })
                                     })
-                                    const data = await res.json()
-                                    if (data.success) {
-                                        toast.success(`Pushed ${data.pushed} leads to Instantly!`)
+                                    const dataResult = await res.json()
+                                    if (dataResult.success) {
+                                        if (dataResult.failed > 0) {
+                                            toast.success(`Pushed ${dataResult.pushed} leads. ${dataResult.failed} failed/skipped.`)
+                                        } else {
+                                            toast.success(`Pushed ${dataResult.pushed} leads to Instantly!`)
+                                        }
                                     } else {
-                                        toast.error("Failed to push to Instantly")
+                                        toast.error(dataResult.message || "Failed to push to Instantly")
                                     }
                                 } catch (e) {
                                     console.error(e)
