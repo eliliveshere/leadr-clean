@@ -33,29 +33,73 @@ export async function POST(request: Request) {
             try {
                 let validUrl = url.startsWith('http') ? url : `https://${url}`
                 const controller = new AbortController()
-                setTimeout(() => controller.abort(), 10000)
+                const timeoutId = setTimeout(() => controller.abort(), 10000)
                 const res = await fetch(validUrl, {
                     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Lead2CloseBot/1.0)' },
                     signal: controller.signal
                 })
+                clearTimeout(timeoutId)
+
                 if (res.ok) {
                     const html = await res.text()
                     const $ = cheerio.load(html)
                     $('script, style').remove()
                     websiteText = $('body').text().slice(0, 8000) // Limit tokens
 
-                    // Extract Social Links
+                    // Extract Social Links form Website
                     $('a').each((_, el) => {
                         const href = $(el).attr('href')
-                        if (href && (href.includes('facebook.com') || href.includes('instagram.com') || href.includes('linkedin.com') || href.includes('twitter.com') || href.includes('youtube.com'))) {
-                            socialLinksFound.push(href)
+                        if (href) {
+                            if (href.includes('facebook.com') || href.includes('instagram.com') || href.includes('linkedin.com') || href.includes('twitter.com') || href.includes('youtube.com')) {
+                                socialLinksFound.push(href)
+                            }
                         }
                     })
                 }
             } catch (e) {
-                console.error("Scrape failed", e)
+                console.error("Website scrape failed", e)
                 websiteText = "Website unreachable."
             }
+        }
+
+        // 3.5 Fallback: Search the Web (DuckDuckGo HTML) if data is sparse
+        // We search for "Business Name City Socials" to find profiles
+        let searchContext = ""
+        try {
+            const query = `${lead.business_name} ${lead.city} reviews facebook instagram linkedin`
+            console.log("Searching web for:", query)
+
+            // Using a public DDG HTML endpoint which is easier to scrape than Google
+            const searchRes = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }
+            })
+
+            if (searchRes.ok) {
+                const searchHtml = await searchRes.text()
+                const $s = cheerio.load(searchHtml)
+                const searchResults: string[] = []
+
+                // DDG HTML results are usually in .result__a
+                $s('.result__a').each((i: number, el: any) => {
+                    if (i > 5) return // Top 5 results
+                    const title = $s(el).text()
+                    const link = $s(el).attr('href')
+                    if (link && !link.includes('duckduckgo.com')) {
+                        searchResults.push(`- ${title}: ${link}`)
+
+                        // Capture socials from search results
+                        if (link.includes('facebook.com') && !socialLinksFound.some(l => l.includes('facebook'))) socialLinksFound.push(link)
+                        if (link.includes('instagram.com') && !socialLinksFound.some(l => l.includes('instagram'))) socialLinksFound.push(link)
+                        if (link.includes('linkedin.com') && !socialLinksFound.some(l => l.includes('linkedin'))) socialLinksFound.push(link)
+                    }
+                })
+
+                searchContext = searchResults.join('\n')
+            }
+        } catch (e) {
+            console.error("Web Search failed", e)
         }
 
         // 4. Construct Prompt
@@ -72,7 +116,10 @@ export async function POST(request: Request) {
        Google Rating: ${lead.rating} (${lead.review_count} reviews)
        Google Data: ${JSON.stringify(lead.google_working_hours || {})}
        
-       Possible Social Links Found: ${socialLinksFound.join(', ')}
+       Possible Social Links Found: ${Array.from(new Set(socialLinksFound)).join(', ')}
+
+       Web Search Findings (Reviews/Profiles):
+       ${searchContext || "No external search data found."}
        
        Website Content Preview:
        ${websiteText.replace(/\s+/g, ' ').trim()}
