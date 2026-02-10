@@ -63,7 +63,7 @@ export async function POST(request: Request) {
         }
 
         // 3. Google Places API (The Gold Standard)
-        const googleApiKey = process.env.GOOGLE_PLACES_API_KEY
+        const googleApiKey = process.env.GOOGLE_PLACES_NEW_API_KEY
         let googleData = null
 
         if (googleApiKey) {
