@@ -123,19 +123,21 @@ export async function POST(request: Request) {
         const quickWins = enriched.quick_wins || []
 
         // Contact Info (Try to find a valid email)
-        // Check enrichment emails first, then standard contact field
-        let email = null
+        let rawEmail = null
         if (lead.enrichment_data?.contact_info?.emails_found?.length > 0) {
-            email = lead.enrichment_data.contact_info.emails_found[0]
+            rawEmail = lead.enrichment_data.contact_info.emails_found[0]
         } else if (lead.email) {
-            email = lead.email
+            rawEmail = lead.email
         }
 
-        if (!email) {
+        if (!rawEmail) {
             console.warn(`No email found for lead ${lead.business_name}, skipping Instantly push.`)
             failureCount++
             continue
         }
+
+        // Sanitize Email
+        const email = rawEmail.toString().trim().toLowerCase().replace('mailto:', '')
 
         // Prepare Payload
         const payload: InstantlyLead = {
