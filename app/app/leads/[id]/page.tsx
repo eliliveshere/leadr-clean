@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import OutreachGenerator from '../outreach-generator'
 import CopyAuditLink from '../copy-audit-link'
+import LeadDetailsEditor from '../lead-details-editor'
 
 export default async function LeadDetailPage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params
@@ -23,35 +24,7 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="border p-4 rounded bg-white shadow-sm">
-                    <h2 className="font-semibold mb-4 text-lg">Details</h2>
-                    <div className="space-y-3 text-sm">
-                        <div className="flex justify-between border-b pb-2">
-                            <span className="text-gray-500">Phone</span>
-                            <span className="font-medium">{lead.phone || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between border-b pb-2">
-                            <span className="text-gray-500">Email</span>
-                            <span className="font-medium">{lead.email || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between border-b pb-2">
-                            <span className="text-gray-500">City</span>
-                            <span className="font-medium">{lead.city || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between border-b pb-2">
-                            <span className="text-gray-500">Category</span>
-                            <span className="font-medium">{lead.category || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between border-b pb-2">
-                            <span className="text-gray-500">Rating</span>
-                            <span className="font-medium">{lead.rating ? `${lead.rating} ★` : 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between border-b pb-2">
-                            <span className="text-gray-500">Opt-in</span>
-                            <span className="font-medium">{lead.has_opt_in ? 'Yes' : 'No'}</span>
-                        </div>
-                    </div>
-                </div>
+                <LeadDetailsEditor lead={lead} />
 
                 <div className="border p-4 rounded bg-white shadow-sm flex flex-col space-y-4">
                     <h2 className="font-semibold text-lg">AI Enrichment</h2>
