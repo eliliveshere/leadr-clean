@@ -65,6 +65,7 @@ export async function POST(request: Request) {
         // 3.5 Fallback: Search the Web (DuckDuckGo HTML) if data is sparse
         // We search for "Business Name City Socials" to find profiles
         let searchContext = ""
+        let googleMapsUrl = ""
         try {
             const query = `${lead.business_name} ${lead.city} reviews facebook instagram linkedin`
             console.log("Searching web for:", query)
@@ -92,10 +93,16 @@ export async function POST(request: Request) {
 
                     if (link && !link.includes('duckduckgo.com')) {
                         searchResults.push(`- [${title}](${link})\n  Snippet: ${snippet}`)
-                        // Capture socials logic...
+
+                        // Capture socials from search results
                         if (link.includes('facebook.com') && !socialLinksFound.some(l => l.includes('facebook'))) socialLinksFound.push(link)
                         if (link.includes('instagram.com') && !socialLinksFound.some(l => l.includes('instagram'))) socialLinksFound.push(link)
                         if (link.includes('linkedin.com') && !socialLinksFound.some(l => l.includes('linkedin'))) socialLinksFound.push(link)
+
+                        // Capture Google Maps Listing if found
+                        if ((link.includes('google.com/maps') || link.includes('goo.gl/maps')) && !googleMapsUrl) {
+                            googleMapsUrl = link
+                        }
                     }
                 })
 
@@ -137,6 +144,7 @@ Business: ${lead.business_name}
 City: ${lead.city}
 Category: ${lead.category}
 Google Rating: ${lead.rating} (${lead.review_count} reviews)
+Google Listing Found: ${googleMapsUrl || "No direct link found in search - rely on snippet text"}
 Google Data: ${JSON.stringify(lead.google_working_hours || {})}
  
 Possible Social Links Found: ${Array.from(new Set(socialLinksFound)).join(', ')}
