@@ -64,10 +64,15 @@ export async function POST(request: Request) {
     }
 
     // You mentioned the key is INSTANTLY_API_KEY in Vercel
-    const apiKey = process.env.INSTANTLY_API_KEY
+    // You mentioned the key is INSTANTLY_API_KEY in Vercel
+    const apiKey = (process.env.INSTANTLY_API_KEY || '').trim()
+
     if (!apiKey) {
+        console.error("Server Config Error: Missing INSTANTLY_API_KEY")
         return new NextResponse('Server Config Error: Missing INSTANTLY_API_KEY', { status: 500 })
     }
+
+    console.log(`Instantly API Key Loaded: ${apiKey.substring(0, 4)}... (Length: ${apiKey.length})`)
 
     // Fetch leads
     const { data: leads } = await supabase
