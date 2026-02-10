@@ -62,10 +62,60 @@ export async function POST(request: Request) {
             }
         }
 
-        // 3.5 Fallback: Search the Web (DuckDuckGo HTML) if data is sparse
-        // We search for "Business Name City Socials" to find profiles
+        // 3. Google Places API (The Gold Standard)
+        const googleApiKey = process.env.GOOGLE_PLACES_API_KEY
+        let googleData = null
+
+        if (googleApiKey) {
+            try {
+                console.log("Using Google Places API for:", `${lead.business_name} ${lead.city}`)
+                // Text Search (New V1 API)
+                const gRes = await fetch('https://places.googleapis.com/v1/places:searchText', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Goog-Api-Key': googleApiKey,
+                        'X-Goog-FieldMask': 'places.name,places.formattedAddress,places.rating,places.userRatingCount,places.websiteUri,places.googleMapsUri,places.currentOpeningHours'
+                    },
+                    body: JSON.stringify({
+                        textQuery: `${lead.business_name} ${lead.city}`
+                    })
+                })
+
+                if (gRes.ok) {
+                    const gData = await gRes.json()
+                    if (gData.places && gData.places.length > 0) {
+                        const place = gData.places[0]
+                        googleData = {
+                            rating: place.rating,
+                            reviews: place.userRatingCount,
+                            address: place.formattedAddress,
+                            website: place.websiteUri,
+                            maps_url: place.googleMapsUri,
+                            hours: place.currentOpeningHours
+                        }
+                        console.log("Google Places Found:", googleData)
+
+                        // Update lead object in memory for the prompt
+                        lead.rating = place.rating
+                        lead.review_count = place.userRatingCount
+                        lead.google_working_hours = place.currentOpeningHours
+
+                        // Also update Supabase proactively? No, enrichment_data update handles status.
+                    }
+                } else {
+                    console.error("Google Places API Error:", await gRes.text())
+                }
+            } catch (e) {
+                console.error("Google Places API Failed", e)
+            }
+        }
+
+        // 3.5 Fallback: Search the Web (DuckDuckGo HTML) if data is sparse OR we want socials
+        // We still run this to find Social Links which Places API doesn't always give
+
         let searchContext = ""
-        let googleMapsUrl = ""
+        let googleMapsUrl = googleData?.maps_url || ""
         try {
             // Simplify query to prioritize finding the natural top results (Official Site, Google Maps)
             const query = `${lead.business_name} ${lead.city}`
