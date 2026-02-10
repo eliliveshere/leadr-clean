@@ -107,6 +107,32 @@ export async function POST(request: Request) {
                 })
 
                 searchContext = searchResults.join('\n\n')
+                console.log("Web Search Results Found:", searchResults.length)
+
+                // If no Google Maps URL found, try a specific search
+                if (!googleMapsUrl) {
+                    try {
+                        console.log("Attempting targeted Google Maps search...")
+                        const mapQuery = `site:google.com/maps ${lead.business_name} ${lead.city}`
+                        const mapRes = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(mapQuery)}`, {
+                            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+                        })
+
+                        if (mapRes.ok) {
+                            const mapHtml = await mapRes.text()
+                            const $m = cheerio.load(mapHtml)
+                            $m('.result__a').each((i: number, el: any) => {
+                                const link = $m(el).attr('href')
+                                if (link && (link.includes('google.com/maps') || link.includes('goo.gl/maps')) && !googleMapsUrl) {
+                                    googleMapsUrl = link
+                                    console.log("Found Targeted Map Found:", link)
+                                }
+                            })
+                        }
+                    } catch (err) {
+                        console.error("Targeted Map Search Failed", err)
+                    }
+                }
 
             }
         } catch (e) {
