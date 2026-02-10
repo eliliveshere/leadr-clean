@@ -108,7 +108,26 @@ export async function POST(request: Request) {
        1. Generate a concise, owner-friendly Digital Performance Audit for the web view.
        2. Generate specific data points for a cold email campaign (Instantly.ai).
 
-       Do NOT use technical jargon or buzzwords. The audience is a local business owner — keep it simple, clear, and credible.
+       **CRITICAL FIRST STEP: CLASSIFY THE BUSINESS**
+       Determine if this business is:
+       Type A: **Local Service / B2C** (Plumber, Dentist, Restaurant, Retail, Gym)
+       Type B: **Professional B2B / Industrial** (Engineering, Manufacturer, Consultant, Law Firm, Wholesaler)
+
+       **APPLY THESE RULES BASED ON CLASSIFICATION:**
+
+       [IF TYPE A - LOCAL B2C]:
+       - **Focus:** Google Maps ranking, Reviews quantity, "Open Now" hours, Missed calls, Social activity (IG/FB).
+       - **Framing:** "You are losing customers to competitors."
+       - **Metric:** Missed revenue / leads.
+
+       [IF TYPE B - PROFESSIONAL B2B]:
+       - **Focus:** Trust & Legitimacy, LinkedIn presence, Website clarity, "Ghost Company" signals (broken links, 2019 copyright), Verification.
+       - **IGNORE:** Instagram/TikTok, Daily posting, After-hours availability (irrelevant).
+       - **Framing:** "You are failing due diligence checks." or "Your referral traffic is bouncing."
+       - **Metric:** Reputation / Trust / RFP Win Rate.
+       - **Quick Wins:** Focus on LinkedIn completeness, Website trust signals (About Us, Projects), Contact form friction. NOT "post more reels".
+
+       --- 
        
        Business: ${lead.business_name}
        City: ${lead.city}
@@ -124,60 +143,56 @@ export async function POST(request: Request) {
        Website Content Preview:
        ${websiteText.replace(/\s+/g, ' ').trim()}
        
+       ---
+
        Task 1 (Audit Report):
-       1. Identify 3-5 "Current Strengths" (High Google rating, 24/7 services, etc).
-       2. Identify 3-5 "Critical Gaps" (Contact form hard to find, missing hours, no social visibility, etc).
+       1. Identify 3-5 "Current Strengths" (Strictly relevant to their Type).
+       2. Identify 3-5 "Critical Gaps" (Strictly relevant to their Type).
        3. Extract contact info & social links.
        4. Determine "Monitoring Signals" status.
        5. Write a simple "Impact Analysis" sentence summarizing their score impact.
 
        Task 2 (Email Data for Export):
-       1. Determine 'primary_service' (e.g. "Plumbing services", "Dental clinic").
-       2. Determine 'primary_conversion_goal' (Phone calls, Form submissions, Bookings, Store visits).
-       3. Guess 'likely_traffic_source' (Google Search, Maps, Paid, etc).
-       4. Identify 3 specific "Quick Wins". These must be 1-step fixes, observable, no jargon.
-          - Bad: "Improve UX friction"
-          - Good: "Make phone number sticky on mobile"
-          - Good: "Move reviews above contact form"
-          - Good: "Add after-hours call capture"
-       5. Estimate 'estimated_lift' (e.g. "10-20%", "15%").
-       6. Try to find a 'first_name' of an owner or contact person if mentioned in the text (e.g. "Hi, I'm Dr. Smith").
+       1. Determine 'primary_service'.
+       2. Determine 'primary_conversion_goal' (B2C calls vs B2B inquiries).
+       3. Guess 'likely_traffic_source' (B2C Maps vs B2B Referrals/Direct).
+       4. Identify 3 specific "Quick Wins".
+          - **For B2B:** "Update Copyright Year", "Fix broken LinkedIn link", "Add 'Projects' section", "Make email clickable".
+          - **For B2C:** "Sticky mobile call button", "Add hours to Google", "Respond to reviews".
+          - **Constraint:** Must be 1-step fixes, observable, no jargon.
+       5. Estimate 'estimated_lift' (e.g. "10-20% trust", "15% leads").
+       6. Try to find a 'first_name' of an owner.
 
        RETURN JSON ONLY. Structure:
        {
          "analysis": {
-             "business_summary": "Short 1-sentence summary of what they do.",
-             "key_strengths": ["Strength 1", "Strength 2", "..."], 
-             "weaknesses_or_gaps": ["Gap 1", "Gap 2", "..."],
-             "improvement_opportunities": ["Opp 1", "Opp 2"],
+             "business_type": "Local B2C | Professional B2B",
+             "business_summary": "Short 1-sentence summary.",
+             "key_strengths": ["..."], 
+             "weaknesses_or_gaps": ["..."],
+             "improvement_opportunities": ["..."],
              "estimated_tech_savviness": "low|medium|high",
-             "impact_analysis": "One sentence summarizing how their score translates to visibility or missed opportunities."
+             "impact_analysis": "One sentence impact summary."
          },
          "email_data": {
              "primary_service": "...",
              "primary_conversion_goal": "...",
              "likely_traffic_source": "...",
              "quick_wins": ["Win 1", "Win 2", "Win 3"],
-             "estimated_lift": "10-20%",
+             "estimated_lift": "...",
              "found_first_name": "Name or null"
          },
          "contact_info": {
              "emails_found": ["..."],
-             "social_platforms": {
-                 "facebook": "url or null",
-                 "instagram": "url or null",
-                 "linkedin": "url or null",
-                 "twitter": "url or null",
-                 "youtube": "url or null"
-             }
+             "social_platforms": { "facebook": "...", "instagram": "...", "linkedin": "...", "twitter": "..." }
          },
          "monitoring_signals": {
-             "social_activity_level": "High|Medium|Low|Dormant",
-             "website_update_frequency": "dynamic|static",
+             "social_activity_level": "...",
+             "website_update_frequency": "...",
              "review_freshness": "...",
              "missing_channels": ["..."]
          },
-         "outreach_hook": "A personalized single sentence hook for a cold email based on findings."
+         "outreach_hook": "Personalized hook based on their BUSINESS TYPE and GAPS."
        }
      `
 
