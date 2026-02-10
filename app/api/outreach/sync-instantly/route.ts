@@ -127,7 +127,11 @@ export async function POST(request: Request) {
         }
 
         const pushed = await pushLeadToInstantly(payload, apiKey, campaign_id)
-        if (pushed) successCount++
+        if (pushed) {
+            successCount++
+            // Mark as contacted locally
+            await supabase.from('leads').update({ status: 'contacted', last_contacted_at: new Date().toISOString() }).eq('id', lead.id)
+        }
         else failureCount++
     }
 
