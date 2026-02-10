@@ -67,7 +67,8 @@ export async function POST(request: Request) {
         let searchContext = ""
         let googleMapsUrl = ""
         try {
-            const query = `${lead.business_name} ${lead.city} reviews facebook instagram linkedin`
+            // Simplify query to prioritize finding the natural top results (Official Site, Google Maps)
+            const query = `${lead.business_name} ${lead.city}`
             console.log("Searching web for:", query)
 
             // Using a public DDG HTML endpoint which is easier to scrape than Google
