@@ -1,0 +1,124 @@
+import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
+
+interface InstantlyLead {
+    email: string
+    first_name: string
+    last_name: string
+    company_name: string
+    website: string
+    custom_variables: Record<string, any>
+}
+
+// Helper to push a single lead to Instantly
+async function pushLeadToInstantly(payload: InstantlyLead, apiKey: string) {
+    console.log("--> Pushing to Instantly:", payload.email)
+    try {
+        const response = await fetch('https://api.instantly.ai/api/v1/lead/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                api_key: apiKey,
+                campaign_id: payload.custom_variables.campaign_id, // Passed in custom_variables for now if needed, or we can handle it differently
+                skip_if_in_workspace: true,
+                leads: [payload] // The API accepts an array
+            })
+        })
+
+        if (!response.ok) {
+            const text = await response.text()
+            console.error(`Instantly API Error (${response.status}):`, text)
+            return false
+        }
+
+        return true
+    } catch (e) {
+        console.error("Instantly Network Error:", e)
+        return false
+    }
+}
+
+export async function POST(request: Request) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return new NextResponse('Unauthorized', { status: 401 })
+
+    const { lead_ids, campaign_id } = await request.json()
+
+    if (!lead_ids || lead_ids.length === 0) {
+        return new NextResponse('No leads selected', { status: 400 })
+    }
+
+    // You mentioned the key is INSTANTLY_API_KEY in Vercel
+    const apiKey = process.env.INSTANTLY_API_KEY
+    if (!apiKey) {
+        return new NextResponse('Server Config Error: Missing INSTANTLY_API_KEY', { status: 500 })
+    }
+
+    // Fetch leads
+    const { data: leads } = await supabase
+        .from('leads')
+        .select('*')
+        .in('id', lead_ids)
+
+    if (!leads) return new NextResponse('Leads not found', { status: 404 })
+
+    let successCount = 0
+    let failureCount = 0
+
+    // Process push
+    for (const lead of leads) {
+        // Enriched Data
+        const enriched = lead.enrichment_data?.email_data || {}
+        const quickWins = enriched.quick_wins || []
+
+        // Contact Info (Try to find a valid email)
+        // Check enrichment emails first, then standard contact field
+        let email = null
+        if (lead.enrichment_data?.contact_info?.emails_found?.length > 0) {
+            email = lead.enrichment_data.contact_info.emails_found[0]
+        } else if (lead.email) {
+            email = lead.email
+        }
+
+        if (!email) {
+            console.warn(`No email found for lead ${lead.business_name}, skipping Instantly push.`)
+            failureCount++
+            continue
+        }
+
+        // Prepare Payload
+        const payload: InstantlyLead = {
+            email: email,
+            first_name: enriched.found_first_name || 'there', // Default fallback
+            last_name: '', // We often don't have this parsed separately
+            company_name: lead.business_name,
+            website: lead.website_url || lead.website || '',
+            custom_variables: {
+                // The AI variables
+                quick_win_1: quickWins[0] || '',
+                quick_win_2: quickWins[1] || '',
+                quick_win_3: quickWins[2] || '',
+                estimated_lift: enriched.estimated_lift || '',
+                primary_service: enriched.primary_service || '',
+
+                // Meta
+                source: 'Lead2Close',
+                campaign_id: campaign_id // Optional: if provided by UI
+            }
+        }
+
+        const pushed = await pushLeadToInstantly(payload, apiKey)
+        if (pushed) successCount++
+        else failureCount++
+    }
+
+    return NextResponse.json({
+        success: true,
+        pushed: successCount,
+        failed: failureCount,
+        message: `Pushed ${successCount} leads to Instantly`
+    })
+}

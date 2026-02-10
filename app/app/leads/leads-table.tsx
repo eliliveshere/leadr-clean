@@ -227,12 +227,39 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
                             Enrich
                         </button>
                         <button
-                            onClick={downloadCSV}
+                            onClick={async () => {
+                                const campaignId = window.prompt("Enter Instantly Campaign ID (Optional):", "")
+                                if (campaignId === null) return // Cancelled
+
+                                setEnriching(true)
+                                try {
+                                    const res = await fetch('/api/outreach/sync-instantly', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            lead_ids: selected,
+                                            campaign_id: campaignId
+                                        })
+                                    })
+                                    const data = await res.json()
+                                    if (data.success) {
+                                        toast.success(`Pushed ${data.pushed} leads to Instantly!`)
+                                    } else {
+                                        toast.error("Failed to push to Instantly")
+                                    }
+                                } catch (e) {
+                                    console.error(e)
+                                    toast.error("Error connecting to Instantly")
+                                } finally {
+                                    setEnriching(false)
+                                    setSelected([])
+                                }
+                            }}
                             disabled={selected.length === 0}
                             className="bg-white border text-black hover:bg-gray-100 px-3 py-1.5 rounded text-sm flex items-center gap-2 disabled:opacity-50 transition-colors"
                         >
-                            <Download className="w-3 h-3" />
-                            Export CSV
+                            <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            Push to Instantly
                         </button>
                         <button
                             onClick={addToQueue}
