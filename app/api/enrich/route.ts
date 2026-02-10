@@ -75,7 +75,8 @@ export async function POST(request: Request) {
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Goog-Api-Key': googleApiKey,
-                        'X-Goog-FieldMask': 'places.name,places.formattedAddress,places.rating,places.userRatingCount,places.websiteUri,places.googleMapsUri,places.currentOpeningHours'
+                        'X-Goog-FieldMask': 'places.name,places.formattedAddress,places.rating,places.userRatingCount,places.websiteUri,places.googleMapsUri,places.currentOpeningHours',
+                        'Referer': request.headers.get('origin') || 'http://localhost:3000' // Sending Referer to satisfy API key restrictions
                     },
                     body: JSON.stringify({
                         textQuery: `${lead.business_name} ${lead.city}`
