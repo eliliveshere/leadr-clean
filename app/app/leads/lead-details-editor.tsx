@@ -14,7 +14,11 @@ export default function LeadDetailsEditor({ lead }: { lead: any }) {
         city: lead.city || '',
         category: lead.category || '',
         rating: lead.rating ? String(lead.rating) : '',
-        has_opt_in: lead.has_opt_in || false
+        has_opt_in: lead.has_opt_in || false,
+        google_maps_url: lead.google_maps_url || '',
+        facebook: lead.enrichment_data?.contact_info?.social_platforms?.facebook || '',
+        instagram: lead.enrichment_data?.contact_info?.social_platforms?.instagram || '',
+        linkedin: lead.enrichment_data?.contact_info?.social_platforms?.linkedin || ''
     })
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -24,31 +28,48 @@ export default function LeadDetailsEditor({ lead }: { lead: any }) {
 
     const handleSave = async () => {
         const supabase = createClient()
+
+        // Prepare Socials Update (Deep merge strategy needed? We'll just overwrite for now)
+        const currentEnrichment = lead.enrichment_data || {}
+        const currentContactInfo = currentEnrichment.contact_info || {}
+        const currentSocials = currentContactInfo.social_platforms || {}
+
+        const newEnrichmentData = {
+            ...currentEnrichment,
+            contact_info: {
+                ...currentContactInfo,
+                social_platforms: {
+                    ...currentSocials,
+                    facebook: formData.facebook || null,
+                    instagram: formData.instagram || null,
+                    linkedin: formData.linkedin || null
+                }
+            }
+        }
+
         const { error } = await supabase
             .from('leads')
             .update({
                 phone: formData.phone || null,
                 email: formData.email || null,
-                website: formData.website || null, // Standardizing on 'website' column if possible, but let's check schema. Usually we use website_url based on previous code.
-                // Wait, the previous code used `lead.website_url || lead.website`. Let's save to both or prefer one.
-                // Actually, let's just save to `email`, `phone`, `city`, `category`.
-                // For website, there might be two columns. I'll update `website_url` as primary.
                 website_url: formData.website || null,
                 city: formData.city || null,
                 category: formData.category || null,
                 rating: formData.rating ? parseFloat(formData.rating) : null,
-                has_opt_in: formData.has_opt_in
+                has_opt_in: formData.has_opt_in,
+                google_maps_url: formData.google_maps_url || null,
+                enrichment_data: newEnrichmentData, // Save updated socials
+                enrichment_status: lead.enrichment_status === 'not_enriched' ? 'manually_enriched' : lead.enrichment_status
             })
             .eq('id', lead.id)
 
         if (error) {
-            toast.error("Failed to save changes")
+            toast.error("Failed to save changes " + error.message)
             return
         }
 
         toast.success("Lead details updated")
         setIsEditing(false)
-        // Ideally we refresh the page or router
         window.location.reload()
     }
 
@@ -64,32 +85,51 @@ export default function LeadDetailsEditor({ lead }: { lead: any }) {
                     </div>
                 </div>
                 <div className="space-y-4 text-sm">
-                    <div>
-                        <label className="block text-gray-500 text-xs mb-1">Phone</label>
-                        <input name="phone" value={formData.phone} onChange={handleChange} className="w-full border p-2 rounded" />
+                    {/* Basic Info */}
+                    <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <label className="block text-gray-500 text-xs mb-1">Phone</label>
+                            <input name="phone" value={formData.phone} onChange={handleChange} className="w-full border p-2 rounded" />
+                        </div>
+                        <div>
+                            <label className="block text-gray-500 text-xs mb-1">City</label>
+                            <input name="city" value={formData.city} onChange={handleChange} className="w-full border p-2 rounded" />
+                        </div>
                     </div>
                     <div>
-                        <label className="block text-gray-500 text-xs mb-1">Email <span className="text-red-500">* Required for Instantly</span></label>
+                        <label className="block text-gray-500 text-xs mb-1">Email <span className="text-red-500">*</span></label>
                         <input name="email" value={formData.email} onChange={handleChange} className="w-full border p-2 rounded font-medium" />
                     </div>
                     <div>
                         <label className="block text-gray-500 text-xs mb-1">Website</label>
                         <input name="website" value={formData.website} onChange={handleChange} className="w-full border p-2 rounded" />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+
+                    {/* Socials & Google */}
+                    <div className="border-t pt-4 space-y-2">
+                        <h3 className="text-xs font-semibold text-gray-900 uppercase">Online Presence</h3>
                         <div>
-                            <label className="block text-gray-500 text-xs mb-1">City</label>
-                            <input name="city" value={formData.city} onChange={handleChange} className="w-full border p-2 rounded" />
+                            <label className="block text-gray-500 text-xs mb-1">Google Maps Link</label>
+                            <input name="google_maps_url" value={formData.google_maps_url} onChange={handleChange} className="w-full border p-2 rounded text-xs" placeholder="https://maps.google.com/..." />
                         </div>
+                        <div>
+                            <label className="block text-gray-500 text-xs mb-1">Facebook URL</label>
+                            <input name="facebook" value={formData.facebook} onChange={handleChange} className="w-full border p-2 rounded text-xs" />
+                        </div>
+                        <div>
+                            <label className="block text-gray-500 text-xs mb-1">Instagram URL</label>
+                            <input name="instagram" value={formData.instagram} onChange={handleChange} className="w-full border p-2 rounded text-xs" />
+                        </div>
+                        <div>
+                            <label className="block text-gray-500 text-xs mb-1">LinkedIn URL</label>
+                            <input name="linkedin" value={formData.linkedin} onChange={handleChange} className="w-full border p-2 rounded text-xs" />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-2">
                         <div>
                             <label className="block text-gray-500 text-xs mb-1">Category</label>
                             <input name="category" value={formData.category} onChange={handleChange} className="w-full border p-2 rounded" />
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                        <div>
-                            <label className="block text-gray-500 text-xs mb-1">Rating</label>
-                            <input name="rating" type="number" step="0.1" value={formData.rating} onChange={handleChange} className="w-full border p-2 rounded" />
                         </div>
                         <div className="flex items-center gap-2 pt-6">
                             <input name="has_opt_in" type="checkbox" checked={formData.has_opt_in} onChange={handleChange} className="rounded border-gray-300" />
@@ -135,6 +175,37 @@ export default function LeadDetailsEditor({ lead }: { lead: any }) {
                         ) : 'N/A'}
                     </span>
                 </div>
+
+                {/* Socials Section */}
+                {(lead.google_maps_url || lead.enrichment_data?.contact_info?.social_platforms) && (
+                    <div className="pt-2 pb-2 space-y-2 border-b">
+                        {lead.google_maps_url && (
+                            <div className="flex justify-between items-center">
+                                <span className="text-gray-500 flex items-center gap-2"><MapPin className="w-3 h-3" /> Google Maps</span>
+                                <a href={lead.google_maps_url} target="_blank" className="text-xs text-blue-600 hover:underline truncate max-w-[150px]">View Listing</a>
+                            </div>
+                        )}
+                        {lead.enrichment_data?.contact_info?.social_platforms?.facebook && (
+                            <div className="flex justify-between items-center">
+                                <span className="text-gray-500 flex items-center gap-2">Facebook</span>
+                                <a href={lead.enrichment_data.contact_info.social_platforms.facebook} target="_blank" className="text-xs text-blue-600 hover:underline truncate max-w-[150px]">profile ↗</a>
+                            </div>
+                        )}
+                        {lead.enrichment_data?.contact_info?.social_platforms?.instagram && (
+                            <div className="flex justify-between items-center">
+                                <span className="text-gray-500 flex items-center gap-2">Instagram</span>
+                                <a href={lead.enrichment_data.contact_info.social_platforms.instagram} target="_blank" className="text-xs text-blue-600 hover:underline truncate max-w-[150px]">profile ↗</a>
+                            </div>
+                        )}
+                        {lead.enrichment_data?.contact_info?.social_platforms?.linkedin && (
+                            <div className="flex justify-between items-center">
+                                <span className="text-gray-500 flex items-center gap-2">LinkedIn</span>
+                                <a href={lead.enrichment_data.contact_info.social_platforms.linkedin} target="_blank" className="text-xs text-blue-600 hover:underline truncate max-w-[150px]">profile ↗</a>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <div className="flex justify-between border-b pb-2 items-center">
                     <span className="text-gray-500 flex items-center gap-2"><MapPin className="w-3 h-3" /> City</span>
                     <span className="font-medium">{lead.city || 'N/A'}</span>
