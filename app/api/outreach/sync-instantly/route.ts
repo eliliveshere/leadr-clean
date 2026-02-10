@@ -41,19 +41,8 @@ async function pushLeadToInstantly(leadData: InstantlyLead, apiKey: string, camp
 
         if (isV2) {
             // API V2 (Bearer Token)
-            // Use Campaign Endpoint to ensure assignment
-            if (campaignId) {
-                // Remove /leads suffix if I guessed wrong before? No, usually it's /campaigns/{id}/leads
-                // But Instantly V2 docs are tricky. Let's try /leads/campaign/{id} or similar?
-                // Actually, let's stick to /leads but pass campaign_id in `leads` array explicitly?
-                // Wait, user said it went to Global.
-                // Re-reading docs snippet: "Add leads in bulk to a campaign or list... /api/v2/lead/moveleads"?
-                // Let's try the generic /leads endpoint BUT structure payload like V1 bulk add?
-                // Or better: Use /api/v2/campaigns/${campaignId}/leads
-                url = `https://api.instantly.ai/api/v2/campaigns/${campaignId}/leads`
-            } else {
-                url = 'https://api.instantly.ai/api/v2/leads'
-            }
+            // Use standard /leads endpoint but with 'campaign' property
+            url = 'https://api.instantly.ai/api/v2/leads'
 
             options = {
                 method: 'POST',
@@ -62,7 +51,14 @@ async function pushLeadToInstantly(leadData: InstantlyLead, apiKey: string, camp
                     'Authorization': `Bearer ${apiKey}`
                 },
                 body: JSON.stringify({
-                    leads: [finalLead] // Wrap in array as per potential V2 bulk requirement
+                    email: finalLead.email,
+                    first_name: finalLead.first_name,
+                    last_name: finalLead.last_name,
+                    company_name: finalLead.company_name,
+                    website: finalLead.website,
+                    campaign: campaignId, // Correct V2 property is 'campaign', not 'campaign_id'
+                    skip_if_in_workspace: true,
+                    custom_variables: finalLead.custom_variables
                 })
             }
         } else {
