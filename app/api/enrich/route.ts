@@ -135,6 +135,31 @@ export async function POST(request: Request) {
                     }
                 }
 
+                // If we found a Google Maps URL, fetch it to get the rating/reviews from meta tags
+                if (googleMapsUrl) {
+                    try {
+                        console.log("Fetching Google Maps Metadata:", googleMapsUrl)
+                        const mapPageRes = await fetch(googleMapsUrl, {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                                'Accept-Language': 'en-US,en;q=0.9'
+                            }
+                        })
+                        if (mapPageRes.ok) {
+                            const mapHtml = await mapPageRes.text()
+                            const $m = cheerio.load(mapHtml)
+                            const metaDesc = $m('meta[name="description"]').attr('content') ||
+                                $m('meta[property="og:description"]').attr('content') || ""
+                            const metaTitle = $m('meta[property="og:title"]').attr('content') || $m('title').text()
+
+                            console.log("Maps Meta:", metaTitle, metaDesc)
+                            searchContext += `\n\n[Google Maps Metadata]\nTitle: ${metaTitle}\nDescription: ${metaDesc}\n(Use this to determine Rating/Reviews)`
+                        }
+                    } catch (e) {
+                        console.error("Failed to scrape Maps page", e)
+                    }
+                }
+
             }
         } catch (e) {
             console.error("Web Search failed", e)
