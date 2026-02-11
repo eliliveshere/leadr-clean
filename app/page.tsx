@@ -265,6 +265,68 @@ export default function Home() {
         </div>
       </section>
 
+      {/* 5. THE PIPELINE */}
+      <section className="px-6 py-24 bg-zinc-900 text-white border-y border-zinc-800">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-16 md:text-center max-w-3xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 tracking-tight">The Complete Outbound Pipeline.</h2>
+            <p className="text-xl text-zinc-400">
+              Leadr isn't just a data tool. It's an end-to-end workflow that takes you from raw list to booked meeting.
+            </p>
+          </div>
+
+          <div className="relative grid md:grid-cols-4 gap-8">
+            {/* Connecting Line (Desktop) */}
+            <div className="hidden md:block absolute top-12 left-0 right-0 h-0.5 bg-gradient-to-r from-zinc-800 via-indigo-500/50 to-zinc-800 -z-10" />
+
+            {/* Step 1 */}
+            <div className="relative group">
+              <div className="w-24 h-24 mx-auto bg-zinc-900 border-4 border-zinc-800 rounded-full flex items-center justify-center mb-6 group-hover:border-indigo-500 transition-colors z-10 relative">
+                <Search className="w-10 h-10 text-indigo-400" />
+              </div>
+              <h3 className="text-xl font-bold text-center mb-2">1. Enrich</h3>
+              <p className="text-center text-zinc-500 text-sm">
+                AI scans website, social, and Google Maps to build a deep profile.
+              </p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="relative group">
+              <div className="w-24 h-24 mx-auto bg-zinc-900 border-4 border-zinc-800 rounded-full flex items-center justify-center mb-6 group-hover:border-indigo-500 transition-colors z-10 relative">
+                <ShieldCheck className="w-10 h-10 text-indigo-400" />
+              </div>
+              <h3 className="text-xl font-bold text-center mb-2">2. Verify</h3>
+              <p className="text-center text-zinc-500 text-sm">
+                Validates contact info and flags risky emails to protect deliverability.
+              </p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="relative group">
+              <div className="w-24 h-24 mx-auto bg-zinc-900 border-4 border-zinc-800 rounded-full flex items-center justify-center mb-6 group-hover:border-indigo-500 transition-colors z-10 relative">
+                <CheckCircle2 className="w-10 h-10 text-indigo-400" />
+              </div>
+              <h3 className="text-xl font-bold text-center mb-2">3. Qualify</h3>
+              <p className="text-center text-zinc-500 text-sm">
+                Filters out bad fits based on your ideal customer profile (ICP).
+              </p>
+            </div>
+
+            {/* Step 4 */}
+            <div className="relative group">
+              <div className="w-24 h-24 mx-auto bg-zinc-900 border-4 border-zinc-800 rounded-full flex items-center justify-center mb-6 group-hover:border-indigo-500 transition-colors z-10 relative">
+                <Zap className="w-10 h-10 text-indigo-400" />
+              </div>
+              <h3 className="text-xl font-bold text-center mb-2">4. Connect</h3>
+              <p className="text-center text-zinc-500 text-sm">
+                Syncs tailored hooks and data directly to your email tool or CRM.
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
       {/* 5. CTA */}
       <section className="px-6 py-24 bg-zinc-950 text-white text-center">
         <div className="max-w-3xl mx-auto">
