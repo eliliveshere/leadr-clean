@@ -1,421 +1,379 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Link2, Sparkles, Zap, Loader2, CheckCircle2, AlertCircle, Download, Trash2 } from 'lucide-react'
+import { Link2, Sparkles, Zap, Loader2, Search, Filter, ArrowUpDown, MoreHorizontal, Copy, Trash2, ChevronLeft, ChevronRight, Eye } from 'lucide-react'
 import { toast } from 'sonner'
 
+type SortField = 'created_at' | 'business_name' | 'status' | 'scan_score'
+type SortOrder = 'asc' | 'desc'
+
 export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
-    // ... states ...
+    const router = useRouter()
+
+    // Core Data State
     const [leads, setLeads] = useState(initialLeads)
     const [selected, setSelected] = useState<string[]>([])
+
+    // Processing States
     const [scanning, setScanning] = useState(false)
     const [enriching, setEnriching] = useState(false)
-    const [deleting, setDeleting] = useState(false) // New state
+    const [deleting, setDeleting] = useState(false)
     const [progress, setProgress] = useState<{ completed: number, total: number } | null>(null)
 
-    // ... useEffect ...
+    // Filter & Sort State
+    const [searchQuery, setSearchQuery] = useState('')
+    const [statusFilter, setStatusFilter] = useState<string>('all')
+    const [sortField, setSortField] = useState<SortField>('created_at')
+    const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
 
-    // ... helper functions ...
-
-    const handleDelete = async () => {
-        if (selected.length === 0) return
-        if (!window.confirm(`Are you sure you want to delete ${selected.length} leads? This cannot be undone.`)) return
-
-        setDeleting(true)
-        const supabase = createClient()
-        const { error } = await supabase
-            .from('leads')
-            .delete()
-            .in('id', selected)
-
-        if (error) {
-            toast.error("Failed to delete leads")
-            setDeleting(false)
-            return
-        }
-
-        toast.success(`Deleted ${selected.length} leads`)
-        setDeleting(false)
-        setSelected([])
-        router.refresh()
-    }
-
-    // ... render ... 
-
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1)
+    const itemsPerPage = 25
 
     useEffect(() => {
         setLeads(initialLeads)
     }, [initialLeads])
 
-    const router = useRouter()
+    // --- Processing Logic (Enrich/Scan/Delete) ---
 
-    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.checked) {
-            setSelected(leads.map((l: any) => l.id))
+    const handleDelete = async () => {
+        if (!window.confirm(`Delete ${selected.length} leads? This cannot be undone.`)) return
+        setDeleting(true)
+        const supabase = createClient()
+        const { error } = await supabase.from('leads').delete().in('id', selected)
+        if (error) {
+            toast.error("Failed to delete")
         } else {
+            toast.success("Leads deleted")
             setSelected([])
+            router.refresh()
         }
+        setDeleting(false)
     }
 
-    const handleSelect = (id: string) => {
-        setSelected(prev =>
-            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-        )
-    }
-
-    const copyAuditLink = (id: string) => {
-        const url = `${window.location.origin}/audit/${id}`
-        navigator.clipboard.writeText(url)
-        toast.success("Audit link copied!")
-    }
-
-    const downloadCSV = () => {
-        if (selected.length === 0) return
-
-        const selectedLeads = leads.filter((l: any) => selected.includes(l.id))
-
-        // Define headers
-        const headers = ['company_name', 'website', 'first_name', 'quick_win_1', 'quick_win_2', 'quick_win_3', 'estimated_lift']
-
-        const rows = selectedLeads.map((l: any) => {
-            const data = l.enrichment_data?.email_data || {}
-            const wins = data.quick_wins || []
-
-            // Helper to escape CSV fields
-            const clean = (text: string) => {
-                const safe = (text || '').replace(/"/g, '""'); // Escape double quotes
-                return `"${safe}"`
-            }
-
-            return [
-                clean(l.business_name),
-                clean(l.website_url || l.website),
-                clean(data.found_first_name || ''),
-                clean(wins[0] || ''),
-                clean(wins[1] || ''),
-                clean(wins[2] || ''),
-                clean(data.estimated_lift || '')
-            ].join(',')
-        })
-
-        const csvContent = [headers.join(','), ...rows].join('\n')
-
-        // Create download link
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.setAttribute('download', `leads_export_${new Date().toISOString().split('T')[0]}.csv`)
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-    }
-
-    // Reuse existing scan logic
-    const runScan = async () => {
-        if (selected.length === 0) return
-        setScanning(true)
-        setProgress({ completed: 0, total: selected.length })
-
-        try {
-            const res = await fetch('/api/qualification/start', {
-                method: 'POST',
-                body: JSON.stringify({ lead_ids: selected })
-            })
-            if (!res.ok) throw new Error('Start failed')
-
-            const { job_id } = await res.json()
-
-            const processBatch = async () => {
-                const runRes = await fetch('/api/qualification/run', {
-                    method: 'POST',
-                    body: JSON.stringify({ job_id })
-                })
-                const runData = await runRes.json()
-                const statusRes = await fetch(`/api/qualification/status?job_id=${job_id}`)
-                const statusData = await statusRes.json()
-
-                setProgress({ completed: statusData.completed, total: statusData.total })
-
-                if (statusData.status === 'running' || statusData.status === 'queued') {
-                    if (runData.processed === 0 && runData.status !== 'done') {
-                        setTimeout(processBatch, 2000)
-                    } else {
-                        setTimeout(processBatch, 500)
-                    }
-                } else {
-                    setScanning(false)
-                    setProgress(null)
-                    router.refresh()
-                }
-            }
-            processBatch()
-
-        } catch (e) {
-            console.error(e)
-            setScanning(false)
-        }
-    }
-
-    // New Bulk Enrichment Logic (Client-side Loop mostly)
     const runEnrich = async () => {
         if (selected.length === 0) return
         setEnriching(true)
         setProgress({ completed: 0, total: selected.length })
-
-        // We'll process them 1 by 1 to not timeout Vercel limit on a single bulk request if we made one.
-        // Actually, individual POSTs is the safest "poor man's queue".
         let completed = 0;
 
-        // Helper to enrich one
-        const enrichOne = async (id: string) => {
-            const formData = new FormData()
-            formData.append('lead_id', id)
-            await fetch('/api/enrich', { method: 'POST', body: formData })
-            completed++
-            setProgress({ completed, total: selected.length })
-        }
-
-        // Run with concurrency of 3
+        // Batch process
         const batchSize = 3;
         for (let i = 0; i < selected.length; i += batchSize) {
             const batch = selected.slice(i, i + batchSize);
-            await Promise.all(batch.map(id => enrichOne(id)));
+            await Promise.all(batch.map(async (id) => {
+                const formData = new FormData()
+                formData.append('lead_id', id)
+                await fetch('/api/enrich', { method: 'POST', body: formData })
+                completed++
+                setProgress({ completed, total: selected.length })
+            }));
         }
-
         setEnriching(false)
         setProgress(null)
         router.refresh()
         toast.success(`Enriched ${selected.length} leads`)
     }
 
-    // Add to Queue Logic
-    const addToQueue = async () => {
-        if (selected.length === 0) return
+    const pushToInstantly = async () => {
+        const campaignId = window.prompt("Enter Instantly Campaign ID:", "2693b890-5098-46f0-95e5-9bb41da97f10")
+        if (!campaignId) return
 
-        // 1. Mark as queued
-        const { error } = await createClient()
-            .from('leads')
-            .update({ outreach_status: 'queued', outreach_scheduled_at: new Date().toISOString() })
-            .in('id', selected)
-
-        if (error) {
-            toast.error("Failed to queue")
-            return
+        setEnriching(true)
+        try {
+            const res = await fetch('/api/outreach/sync-instantly', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lead_ids: selected, campaign_id: campaignId })
+            })
+            const data = await res.json()
+            if (data.success) toast.success(`Pushed ${data.pushed} leads!`)
+            else toast.error(data.message || "Failed")
+        } catch (e) {
+            toast.error("Connection failed")
         }
-
-        toast.success(`Queued ${selected.length} leads`)
-        setEnriching(true) // Reuse loader state for visual feedback
-
-        // 2. Trigger processor loop
-        let completed = 0
-        const processOne = async () => {
-            await fetch('/api/outreach/process-queue', { method: 'POST' })
-            completed++
-            setProgress({ completed, total: selected.length })
-        }
-
-        // Run sequentially to be safe with rate limits
-        for (let i = 0; i < selected.length; i++) {
-            await processOne() // Intentionally serial to avoid rate limits
-        }
-
         setEnriching(false)
-        setProgress(null)
-        router.refresh()
-        toast.success("Outreach batch complete")
+        setSelected([])
     }
 
+    // --- Filtering & Sorting Logic ---
+
+    const filteredLeads = useMemo(() => {
+        return leads.filter(lead => {
+            const matchesSearch =
+                lead.business_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                lead.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                lead.category?.toLowerCase().includes(searchQuery.toLowerCase())
+
+            const matchesStatus = statusFilter === 'all' || lead.enrichment_status === statusFilter
+
+            return matchesSearch && matchesStatus
+        }).sort((a, b) => {
+            const aVal = a[sortField]
+            const bVal = b[sortField]
+
+            if (aVal === bVal) return 0
+
+            const compare = (aVal > bVal ? 1 : -1)
+            return sortOrder === 'asc' ? compare : -compare
+        })
+    }, [leads, searchQuery, statusFilter, sortField, sortOrder])
+
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredLeads.length / itemsPerPage)
+    const paginatedLeads = filteredLeads.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) setSelected(paginatedLeads.map(l => l.id))
+        else setSelected([])
+    }
+
+    const handleSelect = (id: string) => {
+        setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+    }
+
+    // --- UI Components ---
+
     return (
-        <div className="space-y-4 font-sans">
-            <div className="flex gap-2 mb-4 items-center bg-gray-50 p-3 rounded-lg border">
-                <span className="text-sm font-medium text-gray-500 mr-2">Bulk Actions ({selected.length}):</span>
+        <div className="space-y-4 font-sans relative pb-20">
 
-                {scanning || enriching || deleting ? (
-                    <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded text-sm flex items-center gap-2 animate-pulse">
-                        <Loader2 className="animate-spin h-4 w-4" />
-                        {scanning ? 'Scanning...' : enriching ? 'Processing...' : 'Deleting...'}
-                        {progress ? `${progress.completed}/${progress.total}` : ''}
-                    </div>
-                ) : (
-                    <>
-                        <button
-                            onClick={runScan}
-                            disabled={selected.length === 0}
-                            className="bg-white border text-black hover:bg-gray-100 px-3 py-1.5 rounded text-sm flex items-center gap-2 disabled:opacity-50 transition-colors"
-                        >
-                            <Zap className="w-3 h-3" />
-                            Qualify
-                        </button>
-                        <button
-                            onClick={runEnrich}
-                            disabled={selected.length === 0}
-                            className="bg-white border text-black hover:bg-gray-100 px-3 py-1.5 rounded text-sm flex items-center gap-2 disabled:opacity-50 transition-colors"
-                        >
-                            <Sparkles className="w-3 h-3 text-purple-600" />
-                            Enrich
-                        </button>
-                        <button
-                            onClick={async () => {
-                                // Default Campaign ID: 2693b890-5098-46f0-95e5-9bb41da97f10
-                                const campaignId = window.prompt("Enter Instantly Campaign ID:", "2693b890-5098-46f0-95e5-9bb41da97f10")
-                                if (campaignId === null) return // Cancelled
+            {/* Top Utility Bar */}
+            <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center sticky top-0 z-10">
 
-                                setEnriching(true)
-                                try {
-                                    const res = await fetch('/api/outreach/sync-instantly', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            lead_ids: selected,
-                                            campaign_id: campaignId
-                                        })
-                                    })
-                                    const dataResult = await res.json()
-                                    if (dataResult.success) {
-                                        if (dataResult.failed > 0) {
-                                            toast.success(`Pushed ${dataResult.pushed} leads. ${dataResult.failed} failed/skipped.`)
-                                        } else {
-                                            toast.success(`Pushed ${dataResult.pushed} leads to Instantly!`)
-                                        }
-                                    } else {
-                                        toast.error(dataResult.message || "Failed to push to Instantly")
-                                    }
-                                } catch (e) {
-                                    console.error(e)
-                                    toast.error("Error connecting to Instantly")
-                                } finally {
-                                    setEnriching(false)
-                                    setSelected([])
-                                }
-                            }}
-                            disabled={selected.length === 0}
-                            className="bg-white border text-black hover:bg-gray-100 px-3 py-1.5 rounded text-sm flex items-center gap-2 disabled:opacity-50 transition-colors"
-                        >
-                            <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                            Push to Instantly
-                        </button>
-                        <button
-                            onClick={addToQueue}
-                            disabled={selected.length === 0}
-                            className="hidden bg-black text-white hover:bg-gray-800 px-3 py-1.5 rounded text-sm flex items-center gap-2 disabled:opacity-50 transition-colors"
-                        >
-                            <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                            Start Outreach Queue
-                        </button>
-                        <button
-                            onClick={handleDelete}
-                            disabled={selected.length === 0}
-                            className="ml-auto bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded text-sm flex items-center gap-2 disabled:opacity-50 transition-colors"
-                            title="Delete Selected"
-                        >
-                            <Trash2 className="w-3 h-3" />
-                            Delete
-                        </button>
-                    </>
-                )}
+                {/* Search */}
+                <div className="relative w-full md:w-96">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                    <input
+                        type="text"
+                        placeholder="Search business, city, category..."
+                        className="w-full pl-10 pr-4 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+
+                {/* Filters & Sort */}
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <select
+                        className="px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm text-zinc-700 focus:outline-none cursor-pointer hover:bg-zinc-100 transition-colors"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                        <option value="all">All Status</option>
+                        <option value="enriched">Enriched</option>
+                        <option value="pending">Pending</option>
+                        <option value="failed">Failed</option>
+                    </select>
+
+                    <div className="h-6 w-px bg-zinc-200 mx-1" />
+
+                    <select
+                        className="px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm text-zinc-700 focus:outline-none cursor-pointer hover:bg-zinc-100 transition-colors"
+                        value={`${sortField}-${sortOrder}`}
+                        onChange={(e) => {
+                            const [field, order] = e.target.value.split('-') as [SortField, SortOrder]
+                            setSortField(field)
+                            setSortOrder(order)
+                        }}
+                    >
+                        <option value="created_at-desc">Newest First</option>
+                        <option value="created_at-asc">Oldest First</option>
+                        <option value="scan_score-desc">Highest Score</option>
+                        <option value="scan_score-asc">Lowest Score</option>
+                    </select>
+                </div>
             </div>
 
-            <div className="border rounded-lg overflow-hidden shadow-sm bg-white">
+            {/* Main Table */}
+            <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
                 <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-50 text-gray-500 font-medium">
-                        <tr className="border-b">
-                            <th className="p-3 w-[40px]">
-                                <input type="checkbox" onChange={handleSelectAll} checked={selected.length === leads.length && leads.length > 0} className="rounded border-gray-300" />
+                    <thead className="bg-zinc-50/50 text-zinc-500 font-medium border-b border-zinc-200">
+                        <tr>
+                            <th className="p-4 w-[40px]">
+                                <input type="checkbox" onChange={handleSelectAll} checked={selected.length > 0 && selected.length === paginatedLeads.length} className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500" />
                             </th>
-                            <th className="p-3">Business</th>
-                            <th className="p-3">Enrichment</th>
-                            <th className="p-3">Audit</th>
-                            <th className="p-3">Score</th>
-                            <th className="p-3 text-right">Actions</th>
+                            <th className="p-4 font-medium">Business</th>
+                            <th className="p-4 font-medium">Status</th>
+                            <th className="p-4 font-medium">Score</th>
+                            <th className="p-4 font-medium">Quick Actions</th>
+                            <th className="p-4 w-[60px]"></th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y">
-                        {leads.map((lead: any) => (
-                            <tr key={lead.id} className="hover:bg-gray-50/50 transition-colors">
-                                <td className="p-3 align-top pt-4">
-                                    <input type="checkbox" checked={selected.includes(lead.id)} onChange={() => handleSelect(lead.id)} className="rounded border-gray-300" />
+                    <tbody className="divide-y divide-zinc-100">
+                        {paginatedLeads.map((lead: any) => (
+                            <tr key={lead.id} className="group hover:bg-zinc-50/50 transition-colors">
+                                <td className="p-4 align-top pt-5">
+                                    <input type="checkbox" checked={selected.includes(lead.id)} onChange={() => handleSelect(lead.id)} className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500" />
                                 </td>
-                                <td className="p-3">
-                                    <div className="font-semibold text-gray-900 flex items-center gap-2">
-                                        <Link href={`/app/leads/${lead.id}`} className="hover:text-blue-600">
+
+                                <td className="p-4">
+                                    <div className="font-semibold text-zinc-900 group-hover:text-indigo-600 transition-colors">
+                                        <Link href={`/app/leads/${lead.id}`}>
                                             {lead.business_name}
                                         </Link>
-                                        {lead.google_verified && (
-                                            <span title="Google Verified" className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded-full border border-blue-100">Verified</span>
+                                    </div>
+                                    <div className="text-xs text-zinc-500 mt-1 flex flex-wrap gap-2 items-center">
+                                        {lead.website_url && (
+                                            <a href={lead.website_url} target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-indigo-500 truncate max-w-[150px]">
+                                                {lead.website_url.replace(/^https?:\/\//, '')}
+                                            </a>
+                                        )}
+                                        {lead.city && (
+                                            <>
+                                                <span className="text-zinc-300">•</span>
+                                                <span>{lead.city}</span>
+                                            </>
                                         )}
                                     </div>
-                                    <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-2">
-                                        <span>{lead.city}</span>
-                                        {lead.category && <span className="bg-gray-100 px-1 rounded">{lead.category}</span>}
-                                        <span className={`px-1.5 rounded-full text-[10px] border capitalize ${lead.status === 'new' ? 'bg-gray-50 border-gray-200' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
-                                            {lead.status}
-                                        </span>
-                                    </div>
                                 </td>
-                                <td className="p-3 align-middle">
-                                    {lead.enrichment_status === 'enriched' ? (
-                                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-100">
-                                            <Sparkles className="w-3 h-3" /> Enriched
+
+                                <td className="p-4 align-middle">
+                                    {lead.enrichment_data ? (
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            Enriched
                                         </span>
                                     ) : lead.enrichment_status === 'enriching' ? (
-                                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-100">
-                                            <Loader2 className="w-3 h-3 animate-spin" /> Working
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                            Processing
                                         </span>
                                     ) : lead.enrichment_status === 'failed' ? (
-                                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-100">
-                                            <AlertCircle className="w-3 h-3" /> Failed
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-100">
+                                            Failed
                                         </span>
                                     ) : (
-                                        <span className="text-xs text-gray-400">Pending</span>
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-zinc-100 text-zinc-500 border border-zinc-200">
+                                            Not Enriched
+                                        </span>
                                     )}
                                 </td>
-                                <td className="p-3 align-middle">
-                                    {/* Show audit link only if we have a score or enrichment data */}
-                                    {(lead.scan_score || lead.enrichment_status === 'enriched') ? (
-                                        <button
-                                            onClick={() => copyAuditLink(lead.id)}
-                                            className="inline-flex items-center gap-1 text-xs bg-white hover:bg-gray-100 border px-2 py-1 rounded text-gray-600 transition-colors shadow-sm"
-                                        >
-                                            <Link2 className="w-3 h-3" /> Audit Link
-                                        </button>
-                                    ) : (
-                                        <span className="text-xs text-gray-300 italic">No data</span>
-                                    )}
-                                </td>
-                                <td className="p-3 align-middle">
-                                    {lead.scan_score !== null ? (
-                                        <div className={`font-bold text-base ${lead.scan_score > 7 ? 'text-green-600' : lead.scan_score < 4 ? 'text-red-500' : 'text-yellow-600'}`}>
-                                            {lead.scan_score}
+
+                                <td className="p-4 align-middle">
+                                    {lead.scan_score ? (
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-lg font-bold ${lead.scan_score >= 7 ? 'text-emerald-600' : lead.scan_score <= 4 ? 'text-red-500' : 'text-amber-500'}`}>
+                                                {lead.scan_score}
+                                            </span>
+                                            <span className="text-xs text-zinc-400">/ 10</span>
                                         </div>
                                     ) : (
-                                        <span className="text-gray-300">-</span>
+                                        <span className="text-zinc-300 text-xs">-</span>
                                     )}
                                 </td>
-                                <td className="p-3 text-right align-middle">
-                                    <Link
-                                        href={`/app/leads/${lead.id}`}
-                                        className="inline-block text-sm font-medium text-gray-900 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded transition-colors"
-                                    >
-                                        Open
-                                    </Link>
+
+                                <td className="p-4 align-middle">
+                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Link
+                                            href={`/app/leads/${lead.id}`}
+                                            className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-500 hover:text-indigo-600 transition-colors"
+                                            title="View Details"
+                                        >
+                                            <Eye className="w-4 h-4" />
+                                        </Link>
+                                        <button
+                                            onClick={() => {
+                                                if (lead.enrichment_data) {
+                                                    navigator.clipboard.writeText(`${window.location.origin}/audit/${lead.id}`)
+                                                    toast.success("Audit link copied")
+                                                } else {
+                                                    toast.error("Enrich lead first")
+                                                }
+                                            }}
+                                            className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-500 hover:text-zinc-900 transition-colors"
+                                            title="Copy Audit Link"
+                                        >
+                                            <Link2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </td>
+
+                                <td className="p-4 align-middle text-right">
+                                    <button className="text-zinc-400 hover:text-zinc-600">
+                                        <MoreHorizontal className="w-4 h-4" />
+                                    </button>
                                 </td>
                             </tr>
                         ))}
-                        {leads.length === 0 && (
+
+                        {paginatedLeads.length === 0 && (
                             <tr>
-                                <td colSpan={6} className="p-8 text-center text-gray-500">
-                                    No leads found. Import some to get started.
+                                <td colSpan={6} className="py-12 text-center">
+                                    <div className="flex flex-col items-center justify-center text-zinc-500">
+                                        <Search className="w-8 h-8 mb-3 text-zinc-300" />
+                                        <p className="font-medium">No leads found</p>
+                                        <p className="text-xs text-zinc-400 mt-1">Try adjusting your filters or import new leads.</p>
+                                    </div>
                                 </td>
                             </tr>
                         )}
                     </tbody>
                 </table>
+
+                {/* Pagination Footer */}
+                <div className="px-4 py-3 border-t border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
+                    <span className="text-xs text-zinc-500 font-medium">
+                        Showing <span className="text-zinc-900">{Math.min((currentPage - 1) * itemsPerPage + 1, filteredLeads.length)}</span> to <span className="text-zinc-900">{Math.min(currentPage * itemsPerPage, filteredLeads.length)}</span> of <span className="text-zinc-900">{filteredLeads.length}</span>
+                    </span>
+                    <div className="flex gap-1">
+                        <button
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="p-1 rounded hover:bg-zinc-200 disabled:opacity-50 disabled:hover:bg-transparent text-zinc-500 transition-colors"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            className="p-1 rounded hover:bg-zinc-200 disabled:opacity-50 disabled:hover:bg-transparent text-zinc-500 transition-colors"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
             </div>
+
+            {/* Sticky Selection Bar */}
+            {selected.length > 0 && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-zinc-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-6 z-50 animate-in slide-in-from-bottom-4">
+                    <span className="text-sm font-medium border-r border-zinc-700 pr-6">
+                        {selected.length} Selected
+                    </span>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={runEnrich}
+                            disabled={enriching}
+                            className="flex items-center gap-2 px-3 py-1.5 hover:bg-zinc-800 rounded-lg text-sm transition-colors disabled:opacity-50"
+                        >
+                            {enriching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-purple-400" />}
+                            Enrich
+                        </button>
+
+                        <button
+                            onClick={pushToInstantly}
+                            disabled={enriching}
+                            className="flex items-center gap-2 px-3 py-1.5 hover:bg-zinc-800 rounded-lg text-sm transition-colors disabled:opacity-50"
+                        >
+                            <Zap className="w-4 h-4 text-yellow-400" />
+                            Push to Instantly
+                        </button>
+
+                        <button
+                            onClick={handleDelete}
+                            className="flex items-center gap-2 px-3 py-1.5 hover:bg-red-900/30 text-red-400 hover:text-red-300 rounded-lg text-sm transition-colors ml-2"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            )}
+
         </div>
     )
 }
-

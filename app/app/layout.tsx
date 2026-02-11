@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-    title: 'Lead2Close',
+    title: 'Leadr',
     description: 'Outbound and fulfillment pipeline',
 }
 
@@ -24,7 +24,7 @@ export default async function AppLayout({
         <div className="flex min-h-screen flex-col md:flex-row bg-muted/40 text-sm">
             <aside className="hidden w-64 md:flex flex-col bg-background border-r h-screen sticky top-0">
                 <div className="p-6 border-b">
-                    <div className="text-xl font-bold tracking-tight">Lead2Close</div>
+                    <div className="text-xl font-bold tracking-tight">Leadr</div>
                 </div>
                 <nav className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
                     <Link href="/app/leads" className="px-4 py-2 rounded-md hover:bg-muted font-medium transition-colors">Leads</Link>

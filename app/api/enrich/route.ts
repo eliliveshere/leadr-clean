@@ -35,7 +35,7 @@ export async function POST(request: Request) {
                 const controller = new AbortController()
                 const timeoutId = setTimeout(() => controller.abort(), 10000)
                 const res = await fetch(validUrl, {
-                    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Lead2CloseBot/1.0)' },
+                    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; LeadrBot/1.0)' },
                     signal: controller.signal
                 })
                 clearTimeout(timeoutId)

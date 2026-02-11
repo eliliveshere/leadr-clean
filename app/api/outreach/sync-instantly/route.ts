@@ -170,7 +170,7 @@ export async function POST(request: Request) {
                 linkedin: lead.enrichment_data?.contact_info?.social_platforms?.linkedin || '',
 
                 // Meta
-                source: 'Lead2Close'
+                source: 'Leadr'
             }
         }
 
