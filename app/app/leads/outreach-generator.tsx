@@ -18,7 +18,10 @@ export default function OutreachGenerator({ lead }: OutreachGeneratorProps) {
     const [result, setResult] = useState<any>(null)
     const [copied, setCopied] = useState(false)
 
-    async function handleGenerate() {
+    async function handleGenerate(styleOverride?: ToneType) {
+        const styleToUse = styleOverride || tone
+        if (styleOverride) setTone(styleOverride)
+
         setGenerating(true)
         setResult(null) // Clear previous results to show loading state cleanly
 
@@ -29,7 +32,7 @@ export default function OutreachGenerator({ lead }: OutreachGeneratorProps) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     lead: lead,
-                    style: tone,
+                    style: styleToUse,
                     sequence: 'first_touch'
                 })
             })
@@ -71,9 +74,13 @@ export default function OutreachGenerator({ lead }: OutreachGeneratorProps) {
 
         if (generating) {
             return (
-                <div className="flex flex-col items-center justify-center py-12 text-zinc-500 animate-pulse">
-                    <RefreshCw className="w-6 h-6 mb-3 animate-spin" />
-                    <p className="text-sm">Crafting {tone} messages...</p>
+                <div className="p-6 space-y-4">
+                    <div className="h-8 bg-zinc-200 rounded w-1/3 animate-pulse mb-6"></div>
+                    <div className="space-y-2">
+                        <div className="h-4 bg-zinc-100 rounded w-full animate-pulse"></div>
+                        <div className="h-4 bg-zinc-100 rounded w-5/6 animate-pulse"></div>
+                        <div className="h-4 bg-zinc-100 rounded w-4/6 animate-pulse"></div>
+                    </div>
                 </div>
             )
         }
@@ -138,6 +145,21 @@ export default function OutreachGenerator({ lead }: OutreachGeneratorProps) {
                     </div>
                 </div>
 
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => handleGenerate('direct')}
+                        className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-[10px] font-medium text-zinc-600 rounded-lg transition-colors border border-zinc-200"
+                    >
+                        Make Direct
+                    </button>
+                    <button
+                        onClick={() => handleGenerate('friendly')}
+                        className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-[10px] font-medium text-zinc-600 rounded-lg transition-colors border border-zinc-200"
+                    >
+                        Rewrite Friendly
+                    </button>
+                </div>
+
                 {activeTab === 'email' && (
                     <button
                         onClick={() => {
@@ -194,7 +216,7 @@ export default function OutreachGenerator({ lead }: OutreachGeneratorProps) {
                     </select>
 
                     <button
-                        onClick={handleGenerate}
+                        onClick={() => handleGenerate()}
                         disabled={generating}
                         className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                     >

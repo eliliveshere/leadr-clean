@@ -191,14 +191,14 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
             {/* Main Table */}
             <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
                 <table className="w-full text-sm text-left">
-                    <thead className="bg-zinc-50/50 text-zinc-500 font-medium border-b border-zinc-200">
+                    <thead className="bg-zinc-100/80 text-zinc-600 font-medium border-b border-zinc-200">
                         <tr>
-                            <th className="p-4 w-[40px]">
+                            <th className="p-4 w-[32px]">
                                 <input type="checkbox" onChange={handleSelectAll} checked={selected.length > 0 && selected.length === paginatedLeads.length} className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500" />
                             </th>
                             <th className="p-4 font-medium">Business</th>
                             <th className="p-4 font-medium">Status</th>
-                            <th className="p-4 font-medium">Score</th>
+                            <th className="p-4 font-medium">Fit</th>
                             <th className="p-4 font-medium">Quick Actions</th>
                             <th className="p-4 w-[60px]"></th>
                         </tr>
@@ -262,7 +262,7 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
                                             <span className="text-xs text-zinc-400">/ 10</span>
                                         </div>
                                     ) : (
-                                        <span className="text-zinc-300 text-xs">-</span>
+                                        <span className="text-zinc-300 text-[10px] uppercase font-bold tracking-wider opacity-50">Unscored</span>
                                     )}
                                 </td>
 
@@ -275,6 +275,18 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
                                         >
                                             <Eye className="w-4 h-4" />
                                         </Link>
+                                        <button
+                                            onClick={() => {
+                                                const formData = new FormData()
+                                                formData.append('lead_id', lead.id)
+                                                fetch('/api/enrich', { method: 'POST', body: formData })
+                                                toast.success("Enrichment queued")
+                                            }}
+                                            className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-500 hover:text-purple-600 transition-colors"
+                                            title="Quick Enrich"
+                                        >
+                                            <Sparkles className="w-4 h-4" />
+                                        </button>
                                         <button
                                             onClick={() => {
                                                 if (lead.enrichment_data) {

@@ -6,6 +6,7 @@ import CopyAuditLink from '../copy-audit-link'
 import LeadDetailsEditor from '../lead-details-editor'
 import HookCard from './hook-card'
 import ActivityTimeline from './activity-timeline'
+import { formatDistanceToNow } from 'date-fns'
 import {
     Star, MapPin, Globe, Clock, ArrowUpRight,
     CheckCircle2, AlertCircle, ShieldCheck, Zap,
@@ -46,9 +47,12 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
                         <div className="flex items-center gap-2 mb-1">
                             <h1 className="text-2xl font-bold text-zinc-900">{lead.business_name}</h1>
                             {lead.enrichment_status === 'enriched' && (
-                                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-medium flex items-center gap-1 border border-emerald-200">
-                                    <CheckCircle2 className="w-3 h-3" /> Enriched
-                                </span>
+                                <div className="flex flex-col items-start gap-1">
+                                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-medium flex items-center gap-1 border border-emerald-200">
+                                        <CheckCircle2 className="w-3 h-3" /> Enriched
+                                    </span>
+                                    {lead.updated_at && <span className="text-[10px] text-zinc-400">Updated {formatDistanceToNow(new Date(lead.updated_at))} ago</span>}
+                                </div>
                             )}
                         </div>
                         <div className="flex items-center gap-4 text-sm text-zinc-500">
@@ -138,23 +142,34 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
                             </div>
                         ) : (
                             <div className="p-6 md:p-8 space-y-8">
-                                {/* 1. The Hook */}
-                                <div>
+                                {/* 1. The Hook - Hero Style */}
+                                <div className="bg-gradient-to-r from-indigo-50/50 to-white border-l-4 border-indigo-500 pl-6 py-2">
                                     <div className="flex items-center justify-between mb-3">
-                                        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Recommended Outreach Hook</h3>
-                                        <div className="flex gap-2">
-                                            <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[10px] font-semibold border border-indigo-100 uppercase">
-                                                Active Angle
-                                            </span>
-                                        </div>
+                                        <h3 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-2">
+                                            <Sparkles className="w-3 h-3 text-indigo-600" />
+                                            Recommended Outreach Hook
+                                        </h3>
                                     </div>
                                     <HookCard hook={data.outreach_hook} />
+
+                                    {/* New Opportunity Snapshot (Mocked/Inferred) */}
+                                    <div className="mt-6 pt-4 border-t border-indigo-100">
+                                        <h4 className="text-xs font-bold text-zinc-500 uppercase mb-2">Opportunity Snapshot</h4>
+                                        <ul className="space-y-1">
+                                            {analysis.weaknesses_or_gaps?.slice(0, 3).map((g: string, i: number) => (
+                                                <li key={i} className="text-xs text-zinc-600 flex items-start gap-1.5">
+                                                    <span className="text-indigo-400">•</span> {g}
+                                                </li>
+                                            ))}
+                                            {!analysis.weaknesses_or_gaps?.length && <li className="text-xs text-zinc-400">No major gaps detected.</li>}
+                                        </ul>
+                                    </div>
                                 </div>
 
-                                {/* 2. Business Summary */}
+                                {/* 2. Business Overview */}
                                 <div>
-                                    <h3 className="text-sm font-semibold text-zinc-900 mb-2">Executive Summary</h3>
-                                    <p className="text-zinc-600 leading-relaxed text-sm">
+                                    <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Business Overview</h3>
+                                    <p className="text-zinc-800 font-medium leading-relaxed text-sm max-w-2xl">
                                         {analysis.business_summary || "No summary available."}
                                     </p>
                                 </div>
@@ -184,7 +199,7 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
                                             <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
                                                 <AlertCircle className="w-3 h-3 text-amber-600" />
                                             </div>
-                                            <h3 className="font-semibold text-zinc-900">Gaps & Weaknesses</h3>
+                                            <h3 className="font-semibold text-zinc-900">Opportunity Areas</h3>
                                         </div>
                                         <ul className="space-y-3">
                                             {analysis.weaknesses_or_gaps?.map((w: string, i: number) => (
@@ -223,12 +238,11 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
                             <span className="text-[10px] bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded-full border border-zinc-200">Live Signals</span>
                         </h2>
 
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                             {/* Google Rating Tile */}
-                            <div className="flex items-center justify-between p-3 rounded-lg border border-zinc-100 bg-zinc-50">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-white rounded border border-zinc-200">
-                                        {/* Google 'G' fake icon or map pin */}
+                            <div className="flex items-start justify-between p-3 rounded-lg border border-zinc-100 bg-zinc-50">
+                                <div className="flex gap-3">
+                                    <div className="p-2 bg-white rounded border border-zinc-200 h-fit">
                                         <MapPin className="w-4 h-4 text-blue-500" />
                                     </div>
                                     <div>
@@ -243,15 +257,18 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
                                                 <span className="text-zinc-400 font-normal">Not found</span>
                                             )}
                                         </div>
+                                        <div className="text-[10px] text-zinc-400 mt-1">
+                                            {lead.rating ? "Business has a claimed profile." : "Business may not have a claimed Google profile."}
+                                        </div>
                                     </div>
                                 </div>
-                                <div className={`w-2 h-2 rounded-full ${lead.rating ? 'bg-green-500' : 'bg-red-400'}`}></div>
+                                <div className={`w-2 h-2 rounded-full mt-1.5 ${lead.rating ? 'bg-green-500' : 'bg-red-400'}`}></div>
                             </div>
 
                             {/* Website Status Tile */}
-                            <div className="flex items-center justify-between p-3 rounded-lg border border-zinc-100 bg-zinc-50">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-white rounded border border-zinc-200">
+                            <div className="flex items-start justify-between p-3 rounded-lg border border-zinc-100 bg-zinc-50">
+                                <div className="flex gap-3">
+                                    <div className="p-2 bg-white rounded border border-zinc-200 h-fit">
                                         <Globe className="w-4 h-4 text-indigo-500" />
                                     </div>
                                     <div>
@@ -265,15 +282,18 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
                                                 <span className="text-zinc-400 font-normal">Missing</span>
                                             )}
                                         </div>
+                                        <div className="text-[10px] text-zinc-400 mt-1">
+                                            {lead.website ? "Site is reachable and indexed." : "No active website detected."}
+                                        </div>
                                     </div>
                                 </div>
-                                <div className={`w-2 h-2 rounded-full ${lead.website ? 'bg-green-500' : 'bg-zinc-300'}`}></div>
+                                <div className={`w-2 h-2 rounded-full mt-1.5 ${lead.website ? 'bg-green-500' : 'bg-zinc-300'}`}></div>
                             </div>
 
                             {/* Social Activity Tile */}
-                            <div className="flex items-center justify-between p-3 rounded-lg border border-zinc-100 bg-zinc-50">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-white rounded border border-zinc-200">
+                            <div className="flex items-start justify-between p-3 rounded-lg border border-zinc-100 bg-zinc-50">
+                                <div className="flex gap-3">
+                                    <div className="p-2 bg-white rounded border border-zinc-200 h-fit">
                                         <MessageSquare className="w-4 h-4 text-pink-500" />
                                     </div>
                                     <div>
@@ -281,9 +301,12 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
                                         <div className="text-sm font-bold text-zinc-900 flex items-center gap-1 capitalize">
                                             {monitoring.social_activity_level || 'Unknown'}
                                         </div>
+                                        <div className="text-[10px] text-zinc-400 mt-1">
+                                            {monitoring.social_activity_level === 'high' ? "Consistent posting activity detected." : "No recent posting activity detected."}
+                                        </div>
                                     </div>
                                 </div>
-                                <div className={`w-2 h-2 rounded-full ${monitoring.social_activity_level === 'high' ? 'bg-green-500' : monitoring.social_activity_level === 'medium' ? 'bg-yellow-500' : 'bg-base-300'}`}></div>
+                                <div className={`w-2 h-2 rounded-full mt-1.5 ${monitoring.social_activity_level === 'high' ? 'bg-green-500' : monitoring.social_activity_level === 'medium' ? 'bg-yellow-500' : 'bg-base-300'}`}></div>
                             </div>
                         </div>
 
@@ -322,13 +345,14 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
                     </div>
 
                     {/* 3. QUALIFICATION SCANNER (Mini) */}
-                    <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-5">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="font-semibold text-zinc-900">Fit Score</h2>
-                            {lead.scan_status === 'done' && <span className="text-xs font-bold text-zinc-400">{lead.scan_confidence} Confidence</span>}
-                        </div>
+                    {/* 3. QUALIFICATION SCANNER (Only show if done) */}
+                    {lead.scan_status === 'done' && (
+                        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm p-5">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="font-semibold text-zinc-900">Fit Score</h2>
+                                <span className="text-xs font-bold text-zinc-400">{lead.scan_confidence} Confidence</span>
+                            </div>
 
-                        {lead.scan_status === 'done' ? (
                             <div className="space-y-4">
                                 <div className="flex items-center gap-3">
                                     <div className={`w-full h-2 rounded-full bg-zinc-100 overflow-hidden`}>
@@ -340,18 +364,8 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
                                     {lead.scan_reasons?.[0] || "No detailed reasoning."}
                                 </div>
                             </div>
-                        ) : (
-                            <div className="text-center py-4">
-                                <p className="text-sm text-zinc-400 mb-2">Not scanned yet</p>
-                                <form action="/api/qualification/start-single" method="post">
-                                    <input type="hidden" name="lead_id" value={lead.id} />
-                                    <button className="text-xs bg-zinc-100 hover:bg-zinc-200 px-3 py-1.5 rounded font-medium transition-colors">
-                                        Scan Fit
-                                    </button>
-                                </form>
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
 
                 </div>
             </div>
