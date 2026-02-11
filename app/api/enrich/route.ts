@@ -227,6 +227,31 @@ export async function POST(request: Request) {
                     }
                 }
 
+                // Social Pulse Check: Search for FB/IG to find activity dates
+                try {
+                    const socialQuery = `site:facebook.com OR site:instagram.com "${lead.business_name}" ${lead.city}`
+                    console.log("Pulse Checking Socials:", socialQuery)
+                    const socialRes = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(socialQuery)}`, {
+                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+                    })
+                    if (socialRes.ok) {
+                        const sHtml = await socialRes.text()
+                        const $soc = cheerio.load(sHtml)
+                        let socialSnippets = ""
+                        $soc('.result').each((i: number, el: any) => {
+                            if (i > 3) return // Top 3 results only
+                            const title = $soc(el).find('.result__a').text().trim()
+                            const snippet = $soc(el).find('.result__snippet').text().trim()
+                            if (snippet) socialSnippets += `- ${title}: "${snippet}"\n`
+                        })
+                        if (socialSnippets) {
+                            searchContext += `\n\n[Social Media Scrape (Look for dates/activity)]\n${socialSnippets}`
+                        }
+                    }
+                } catch (e) {
+                    console.error("Social pulse check failed", e)
+                }
+
             }
         } catch (e) {
             console.error("Web Search failed", e)
