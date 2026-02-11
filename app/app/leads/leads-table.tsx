@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Link2, Sparkles, Zap, Loader2, Search, Filter, ArrowUpDown, MoreHorizontal, Copy, Trash2, ChevronLeft, ChevronRight, Eye } from 'lucide-react'
 import { toast } from 'sonner'
+import RowActionMenu from './row-action-menu'
 
 type SortField = 'created_at' | 'business_name' | 'status' | 'scan_score'
 type SortOrder = 'asc' | 'desc'
@@ -292,9 +293,7 @@ export default function LeadsTable({ leads: initialLeads }: { leads: any[] }) {
                                 </td>
 
                                 <td className="p-4 align-middle text-right">
-                                    <button className="text-zinc-400 hover:text-zinc-600">
-                                        <MoreHorizontal className="w-4 h-4" />
-                                    </button>
+                                    <RowActionMenu lead={lead} />
                                 </td>
                             </tr>
                         ))}

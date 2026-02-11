@@ -5,6 +5,7 @@ import OutreachGenerator from '../outreach-generator'
 import CopyAuditLink from '../copy-audit-link'
 import LeadDetailsEditor from '../lead-details-editor'
 import HookCard from './hook-card'
+import ActivityTimeline from './activity-timeline'
 import {
     Star, MapPin, Globe, Clock, ArrowUpRight,
     CheckCircle2, AlertCircle, ShieldCheck, Zap,
@@ -355,7 +356,8 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
                 </div>
             </div>
 
-            {/* Imports for Icons and Utilities need to be clear */}
+            {/* 4. ACTIVITY TIMELINE */}
+            <ActivityTimeline lead={lead} />
         </div>
     )
 }
