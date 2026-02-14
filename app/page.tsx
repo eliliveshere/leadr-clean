@@ -2,8 +2,8 @@ import Link from 'next/link'
 import {
   ArrowRight, CheckCircle2, Globe, MapPin,
   Search, ShieldCheck, Sparkles, Zap,
-  Layers, database, MousePointer2, AlertCircle,
-  X, Check
+  MousePointer2,
+  X, Check, Users
 } from 'lucide-react'
 
 export default function Home() {
