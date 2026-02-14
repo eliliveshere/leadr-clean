@@ -28,6 +28,8 @@ export default async function AppLayout({
                 </div>
                 <nav className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
                     <Link href="/app/leads" className="px-4 py-2 rounded-md hover:bg-muted font-medium transition-colors">Leads</Link>
+                    <Link href="/app/onboarding" className="px-4 py-2 rounded-md hover:bg-muted font-medium transition-colors">Get Started</Link>
+                    <Link href="/app/settings" className="px-4 py-2 rounded-md hover:bg-muted font-medium transition-colors">Settings</Link>
                 </nav>
             </aside>
 
@@ -38,6 +40,12 @@ export default async function AppLayout({
             <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t p-2 flex justify-around items-center z-50 pb-safe">
                 <Link href="/app/leads" className="p-2 text-xs flex flex-col items-center gap-1">
                     <span>Leads</span>
+                </Link>
+                <Link href="/app/onboarding" className="p-2 text-xs flex flex-col items-center gap-1">
+                    <span>Start</span>
+                </Link>
+                <Link href="/app/settings" className="p-2 text-xs flex flex-col items-center gap-1">
+                    <span>Settings</span>
                 </Link>
             </nav>
         </div>
